@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ material.name }} – Material Details | PolySelect</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+    <nav class="navbar" id="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <i class="fas fa-atom"></i>
+                <span>PolySelect</span>
+            </a>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/#about">About</a></li>
+                <li><a href="/#features">Features</a></li>
+                <li><a href="/#recommend" class="btn-nav">Get Recommendation</a></li>
+            </ul>
+            <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <section class="material-hero">
+        <div class="container">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+                <a href="/">Home</a>
+                <span class="separator">/</span>
+                <span aria-current="page">{{ material.name }}</span>
+            </nav>
+            <h1>{{ material.name }}</h1>
+            <p class="material-category">{{ material.category }}</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="details-layout">
+                <div class="details-main">
+                    <article class="details-card">
+                        <h2><i class="fas fa-align-left"></i> Description</h2>
+                        <p>{{ material.description }}</p>
+                    </article>
+
+                    <article class="details-card">
+                        <h2><i class="fas fa-thumbs-up"></i> Advantages</h2>
+                        <p>{{ material.advantages }}</p>
+                    </article>
+
+                    <article class="details-card">
+                        <h2><i class="fas fa-exclamation-circle"></i> Limitations</h2>
+                        <p>{{ material.limitations }}</p>
+                    </article>
+
+                    <article class="details-card">
+                        <h2><i class="fas fa-cogs"></i> Typical Applications</h2>
+                        <p>{{ material.applications }}</p>
+                    </article>
+                </div>
+
+                <aside class="details-sidebar">
+                    <div class="properties-card">
+                        <h3>Key Properties</h3>
+
+                        <div class="property-item">
+                            <span class="property-label"><i class="fas fa-dumbbell"></i> Tensile Strength</span>
+                            <span class="property-value">{{ material.strength }} MPa</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-label"><i class="fas fa-thermometer-half"></i> Max Temperature</span>
+                            <span class="property-value">{{ material.max_temperature }}°C</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-label"><i class="fas fa-weight-hanging"></i> Density</span>
+                            <span class="property-value">{{ material.density }} g/cm³</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-label"><i class="fas fa-flask"></i> Chemical Resistance</span>
+                            <span class="property-value">{{ material.chemical_resistance }}</span>
+                        </div>
+                        <div class="property-item">
+                            <span class="property-label"><i class="fas fa-tag"></i> Cost Level</span>
+                            <span class="property-value">{{ material.cost }}</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <a href="/" class="btn btn-outline btn-block">
+                            <i class="fas fa-arrow-left"></i> Back to Home
+                        </a>
+                        <a href="/#recommend" class="btn btn-primary btn-block">
+                            <i class="fas fa-search"></i> Get Recommendation
+                        </a>
+                    </div>
+                </aside>
+            </div>
+
+            {% if related %}
+            <div class="related-section">
+                <h2 class="section-title">Related Materials</h2>
+                <div class="materials-grid">
+                    {% for item in related %}
+                    <a href="{{ url_for('material_details', id=item.id) }}" class="material-card">
+                        <h3>{{ item.name }}</h3>
+                        <p class="category">{{ item.category }}</p>
+                        <p class="material-meta">
+                            {{ item.strength }} MPa · {{ item.max_temperature }}°C
+                        </p>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="footer-title">Polymer Material Selection & Recommendation System</p>
+            <p class="footer-sub">Rule-Based Decision Making · Flask · MySQL · HTML / CSS / JavaScript</p>
+            <p class="footer-copy">Final Year Engineering Project &copy; 2026</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
