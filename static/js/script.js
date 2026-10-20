@@ -1,3 +1,9 @@
+// ================== API CONFIGURATION ==================
+// In single-origin deployments (Flask serving HTML), API_BASE_URL is empty ('').
+// In decoupled architectures (e.g. Vercel frontend calling Render backend),
+// window.API_BASE_URL can be set to the backend's public URL.
+const API_BASE_URL = window.API_BASE_URL || '';
+
 /* ============================================================
    PolySelect – Frontend Validation & Error Handling
    ============================================================ */
@@ -23,7 +29,7 @@ async function loadMaterials() {
     if (!grid) return;
 
     try {
-        const response = await fetch('/api/materials');
+        const response = await fetch(`${API_BASE_URL}/api/materials`);
         const data = await response.json();
 
         if (data.success && Array.isArray(data.materials)) {
@@ -31,19 +37,19 @@ async function loadMaterials() {
             data.materials.forEach(mat => {
                 const card = document.createElement('a');
                 card.className = 'material-card';
-                card.href = `/material/${mat.id}`;
+                card.href = `/material/${encodeURIComponent(mat.id)}`;
                 card.innerHTML = `
                     <h3>${escapeHtml(mat.name)}</h3>
                     <p class="category">${escapeHtml(mat.category)}</p>
                     <p class="material-meta">
-                        ${mat.strength} MPa · ${mat.max_temperature}°C · ${escapeHtml(mat.cost)}
+                        ${escapeHtml(String(mat.strength))} MPa · ${escapeHtml(String(mat.max_temperature))}°C · ${escapeHtml(mat.cost)}
                     </p>
                 `;
                 grid.appendChild(card);
             });
         }
     } catch (err) {
-        console.error('Materials load failed');
+        console.error('Materials load failed', err);
         // Silent fail – overview is not critical
     }
 }
@@ -65,12 +71,19 @@ function showLoading(show) {
 
 /* ---------- Form Validation ---------- */
 function validateForm() {
-    const application = document.getElementById('application').value.trim();
-    const strength = document.getElementById('strength').value;
-    const temperatureRaw = document.getElementById('temperature').value;
-    const weight = document.getElementById('weight').value;
-    const chemical = document.getElementById('chemical_resistance').value;
-    const cost = document.getElementById('cost').value;
+    const applicationEl = document.getElementById('application');
+    const strengthEl = document.getElementById('strength');
+    const temperatureEl = document.getElementById('temperature');
+    const weightEl = document.getElementById('weight');
+    const chemicalEl = document.getElementById('chemical_resistance');
+    const costEl = document.getElementById('cost');
+
+    const application = applicationEl ? applicationEl.value.trim() : '';
+    const strength = strengthEl ? strengthEl.value : '';
+    const temperatureRaw = temperatureEl ? temperatureEl.value : '';
+    const weight = weightEl ? weightEl.value : '';
+    const chemical = chemicalEl ? chemicalEl.value : '';
+    const cost = costEl ? costEl.value : '';
 
     const errors = [];
 
@@ -133,7 +146,7 @@ if (form) {
         showLoading(true);
 
         try {
-            const response = await fetch('/api/recommend', {
+            const response = await fetch(`${API_BASE_URL}/api/recommend`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(validation.payload)

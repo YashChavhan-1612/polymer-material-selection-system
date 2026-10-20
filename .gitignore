@@ -6,6 +6,8 @@ env/
 
 # Environment variables (NEVER commit real secrets)
 .env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -17,6 +19,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
 
 # Flask / instance
 instance/
