@@ -62,7 +62,8 @@ class Config:
         'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', '10')),
         'pool_timeout': int(os.getenv('DB_POOL_TIMEOUT', '30')),
         'connect_args': {
-            'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '10'))
+            'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '10')),
+             'ssl': {}
         }
     }
 
