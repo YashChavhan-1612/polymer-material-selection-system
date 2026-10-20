@@ -1,7 +1,396 @@
+# import json
+# import os
+# from flask import Flask, jsonify, request, render_template, abort
+# from flask_cors import CORS
+
+# from config import Config
+# from database import (
+#     db,
+#     Polymer,
+#     RecommendationHistory,
+#     get_all_polymers,
+#     get_polymer_by_id,
+#     get_polymer_by_name,
+#     seed_database
+# )
+# from recommendation.recommendation_engine import recommend_materials
+
+# app = Flask(__name__)
+# app.config.from_object(Config)
+
+# # Enable CORS for API routes so optional external clients or decoupled frontends can connect
+# CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+# # Initialize database extension
+# db.init_app(app)
+
+
+# # ============================================================
+# # Frontend Web Routes (HTML Views)
+# # ============================================================
+
+# @app.route('/')
+# def home():
+#     """Render the main interactive Polymer Material Selection interface."""
+#     return render_template('index.html')
+
+
+# @app.route('/material/<int:id>')
+# def material_details(id):
+#     """Render the detailed property view for a specific polymer."""
+#     polymer = get_polymer_by_id(id)
+#     if polymer is None:
+#         abort(404)
+
+#     related = Polymer.query.filter(
+#         Polymer.category == polymer.category,
+#         Polymer.id != polymer.id
+#     ).limit(3).all()
+
+#     return render_template('material_details.html', material=polymer, related=related)
+
+
+# # ============================================================
+# # Health & Status Endpoints
+# # ============================================================
+
+# @app.route('/health', methods=['GET'])
+# @app.route('/api/health', methods=['GET'])
+# def health_check():
+#     """
+#     Lightweight health endpoint distinguishing application liveness
+#     from database connectivity readiness without leaking credentials.
+#     """
+#     db_connected = False
+#     try:
+#         db.session.execute(db.text('SELECT 1'))
+#         db_connected = True
+#     except Exception:
+#         db_connected = False
+
+#     status = "healthy" if db_connected else "degraded"
+#     status_code = 200 if db_connected else 503
+
+#     return jsonify({
+#         "status": status,
+#         "database": "connected" if db_connected else "disconnected",
+#         "version": "1.0.0"
+#     }), status_code
+
+
+# @app.route('/test-db', methods=['GET'])
+# def test_db():
+#     """Diagnostic database connectivity check."""
+#     try:
+#         db.session.execute(db.text('SELECT 1'))
+#         return jsonify({
+#             "success": True,
+#             "message": "Database connection successful"
+#         }), 200
+#     except Exception:
+#         return jsonify({
+#             "success": False,
+#             "message": "Database connection failed"
+#         }), 500
+
+
+# # ============================================================
+# # Material API Endpoints
+# # ============================================================
+
+# @app.route('/api/materials', methods=['GET'])
+# def api_get_all_materials():
+#     """Return all polymer materials as JSON."""
+#     try:
+#         polymers = get_all_polymers()
+#         result = [p.to_dict() for p in polymers]
+#         return jsonify({
+#             'success': True,
+#             'count': len(result),
+#             'materials': result
+#         }), 200
+#     except Exception:
+#         return jsonify({
+#             'success': False,
+#             'error': 'server_error',
+#             'message': 'Unable to retrieve materials at this time. Please try again later.'
+#         }), 500
+
+
+# @app.route('/api/materials/<int:id>', methods=['GET'])
+# def api_get_material_by_id(id):
+#     """Retrieve a single polymer by its database ID."""
+#     try:
+#         polymer = get_polymer_by_id(id)
+#         if polymer is None:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'not_found',
+#                 'message': f'No material found with ID {id}.'
+#             }), 404
+
+#         return jsonify({
+#             'success': True,
+#             'material': polymer.to_dict()
+#         }), 200
+#     except Exception:
+#         return jsonify({
+#             'success': False,
+#             'error': 'server_error',
+#             'message': 'Unable to retrieve the requested material. Please try again later.'
+#         }), 500
+
+
+# @app.route('/api/materials/name/<string:name>', methods=['GET'])
+# def api_get_material_by_name(name):
+#     """Retrieve a single polymer by name (case-insensitive)."""
+#     try:
+#         if not name or not name.strip():
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'validation_error',
+#                 'message': 'Material name cannot be empty.'
+#             }), 400
+
+#         polymer = get_polymer_by_name(name.strip())
+#         if polymer is None:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'not_found',
+#                 'message': f'No material found with the name "{name}".'
+#             }), 404
+
+#         return jsonify({
+#             'success': True,
+#             'material': polymer.to_dict()
+#         }), 200
+#     except Exception:
+#         return jsonify({
+#             'success': False,
+#             'error': 'server_error',
+#             'message': 'Unable to retrieve the requested material. Please try again later.'
+#         }), 500
+
+
+# # ============================================================
+# # Recommendation API
+# # ============================================================
+
+# @app.route('/api/recommend', methods=['POST'])
+# def api_recommend():
+#     """
+#     Validate engineering requirements and generate ranked polymer
+#     recommendations using the 100-point rule-based decision algorithm.
+#     """
+#     try:
+#         # 1. Content-Type check
+#         if not request.is_json:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'validation_error',
+#                 'message': 'Request must be sent as JSON.'
+#             }), 400
+
+#         data = request.get_json(silent=True)
+#         if data is None:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'validation_error',
+#                 'message': 'Invalid or empty JSON body.'
+#             }), 400
+
+#         # 2. Required fields validation
+#         required_fields = [
+#             'application', 'strength', 'temperature',
+#             'weight', 'chemical_resistance', 'cost'
+#         ]
+#         missing = [
+#             field for field in required_fields
+#             if field not in data or data[field] is None or str(data[field]).strip() == ''
+#         ]
+#         if missing:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'validation_error',
+#                 'message': f'Missing required fields: {", ".join(missing)}.'
+#             }), 400
+
+#         # 3. Extract and sanitize inputs
+#         application = str(data['application']).strip()
+#         strength = str(data['strength']).strip().capitalize()
+#         weight = str(data['weight']).strip().capitalize()
+#         chemical_resistance = str(data['chemical_resistance']).strip().capitalize()
+#         cost = str(data['cost']).strip().capitalize()
+
+#         # 4. Temperature validation
+#         try:
+#             temperature = int(data['temperature'])
+#         except (TypeError, ValueError):
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'validation_error',
+#                 'message': 'Operating temperature must be a whole number (e.g. 60).'
+#             }), 400
+
+#         if temperature < 0 or temperature > 400:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'validation_error',
+#                 'message': 'Operating temperature must be between 0°C and 400°C.'
+#             }), 400
+
+#         # 5. Allowed categorical values
+#         allowed = {
+#             'strength': ['Low', 'Medium', 'High'],
+#             'weight': ['Low', 'Medium', 'High'],
+#             'chemical_resistance': ['Low', 'Medium', 'High'],
+#             'cost': ['Low', 'Medium', 'High']
+#         }
+
+#         for field, value, allowed_list in [
+#             ('strength', strength, allowed['strength']),
+#             ('weight', weight, allowed['weight']),
+#             ('chemical_resistance', chemical_resistance, allowed['chemical_resistance']),
+#             ('cost', cost, allowed['cost'])
+#         ]:
+#             if value not in allowed_list:
+#                 return jsonify({
+#                     'success': False,
+#                     'error': 'validation_error',
+#                     'message': f'{field.replace("_", " ").title()} must be one of: {", ".join(allowed_list)}.'
+#                 }), 400
+
+#         # 6. Application length check
+#         if len(application) < 2 or len(application) > 150:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'validation_error',
+#                 'message': 'Application type must be between 2 and 150 characters.'
+#             }), 400
+
+#         # 7. Execute rule-based recommendation
+#         try:
+#             recommendations = recommend_materials(
+#                 application=application,
+#                 required_strength=strength,
+#                 operating_temperature=temperature,
+#                 weight_requirement=weight,
+#                 chemical_resistance=chemical_resistance,
+#                 cost_preference=cost
+#             )
+#         except Exception:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'engine_error',
+#                 'message': 'The recommendation engine encountered a problem. Please try again.'
+#             }), 500
+
+#         if not recommendations:
+#             return jsonify({
+#                 'success': False,
+#                 'error': 'no_results',
+#                 'message': 'No suitable materials found for the given requirements. Try adjusting your inputs.'
+#             }), 200
+
+#         # 8. Save recommendation history (non-critical write)
+#         try:
+#             history_entry = RecommendationHistory(
+#                 application=application,
+#                 required_strength=strength,
+#                 operating_temperature=temperature,
+#                 weight_requirement=weight,
+#                 chemical_resistance=chemical_resistance,
+#                 cost_preference=cost,
+#                 recommendation_result=json.dumps(recommendations)
+#             )
+#             db.session.add(history_entry)
+#             db.session.commit()
+#         except Exception:
+#             db.session.rollback()
+
+#         # 9. Return success response
+#         return jsonify({
+#             'success': True,
+#             'count': len(recommendations),
+#             'message': 'Recommendations generated successfully.',
+#             'recommendations': recommendations
+#         }), 200
+
+
+#     except Exception:
+#                  app.logger.exception("RECOMMENDATION ENGINE FAILED")
+#                  return jsonify({
+#                      'success': False,
+#                      'error': 'engine_error',
+#                      'message': 'The recommendation engine encountered a problem. Please try again.'
+#                  }), 500
+     
+#     # except Exception:
+#     #     # Catch-all to prevent stack trace leaks
+#     #     return jsonify({
+#     #         'success': False,
+#     #         'error': 'server_error',
+#     #         'message': 'An unexpected error occurred. Please try again later.'
+#     #     }), 500
+    
+# # ============================================================
+# # Error Handlers
+# # ============================================================
+
+# @app.errorhandler(404)
+# def not_found(e):
+#     if request.path.startswith('/api/'):
+#         return jsonify({
+#             'success': False,
+#             'error': 'not_found',
+#             'message': 'The requested API endpoint was not found.'
+#         }), 404
+#     return render_template('index.html'), 404
+
+
+# @app.errorhandler(500)
+# def server_error(e):
+#     if request.path.startswith('/api/'):
+#         return jsonify({
+#             'success': False,
+#             'error': 'server_error',
+#             'message': 'Internal server error occurred.'
+#         }), 500
+#     return "An internal server error occurred. Please try again later.", 500
+
+
+# # ============================================================
+# # CLI Database Commands
+# # ============================================================
+
+# @app.cli.command('init-db')
+# def init_db_command():
+#     """CLI command to create database tables and seed default polymer materials safely."""
+#     with app.app_context():
+#         db.create_all()
+#         inserted, total = seed_database()
+#         print(f"Database schema verified. Seeded {inserted} new materials. Total materials: {total}.")
+
+
+# # ============================================================
+# # Production / Local Startup
+# # ============================================================
+
+# if __name__ == '__main__':
+#     port = int(os.environ.get('PORT', 5000))
+#     app.run(host='0.0.0.0', port=port, debug=Config.DEBUG)
+
+
+
+
+
 import json
 import os
+import logging
+
 from flask import Flask, jsonify, request, render_template, abort
 from flask_cors import CORS
+from sqlalchemy import text
 
 from config import Config
 from database import (
@@ -11,164 +400,179 @@ from database import (
     get_all_polymers,
     get_polymer_by_id,
     get_polymer_by_name,
-    seed_database
+    seed_database,
 )
 from recommendation.recommendation_engine import recommend_materials
+
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
-# Enable CORS for API routes so optional external clients or decoupled frontends can connect
+# Log exceptions to Render runtime logs without exposing credentials.
+app.logger.setLevel(logging.INFO)
+
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
-# Initialize database extension
 db.init_app(app)
 
 
 # ============================================================
-# Frontend Web Routes (HTML Views)
+# Frontend routes
 # ============================================================
 
-@app.route('/')
+@app.route("/")
 def home():
-    """Render the main interactive Polymer Material Selection interface."""
-    return render_template('index.html')
+    return render_template("index.html")
 
 
-@app.route('/material/<int:id>')
+@app.route("/material/<int:id>")
 def material_details(id):
-    """Render the detailed property view for a specific polymer."""
-    polymer = get_polymer_by_id(id)
-    if polymer is None:
-        abort(404)
-
-    related = Polymer.query.filter(
-        Polymer.category == polymer.category,
-        Polymer.id != polymer.id
-    ).limit(3).all()
-
-    return render_template('material_details.html', material=polymer, related=related)
-
-
-# ============================================================
-# Health & Status Endpoints
-# ============================================================
-
-@app.route('/health', methods=['GET'])
-@app.route('/api/health', methods=['GET'])
-def health_check():
-    """
-    Lightweight health endpoint distinguishing application liveness
-    from database connectivity readiness without leaking credentials.
-    """
-    db_connected = False
-    try:
-        db.session.execute(db.text('SELECT 1'))
-        db_connected = True
-    except Exception:
-        db_connected = False
-
-    status = "healthy" if db_connected else "degraded"
-    status_code = 200 if db_connected else 503
-
-    return jsonify({
-        "status": status,
-        "database": "connected" if db_connected else "disconnected",
-        "version": "1.0.0"
-    }), status_code
-
-
-@app.route('/test-db', methods=['GET'])
-def test_db():
-    """Diagnostic database connectivity check."""
-    try:
-        db.session.execute(db.text('SELECT 1'))
-        return jsonify({
-            "success": True,
-            "message": "Database connection successful"
-        }), 200
-    except Exception:
-        return jsonify({
-            "success": False,
-            "message": "Database connection failed"
-        }), 500
-
-
-# ============================================================
-# Material API Endpoints
-# ============================================================
-
-@app.route('/api/materials', methods=['GET'])
-def api_get_all_materials():
-    """Return all polymer materials as JSON."""
-    try:
-        polymers = get_all_polymers()
-        result = [p.to_dict() for p in polymers]
-        return jsonify({
-            'success': True,
-            'count': len(result),
-            'materials': result
-        }), 200
-    except Exception:
-        return jsonify({
-            'success': False,
-            'error': 'server_error',
-            'message': 'Unable to retrieve materials at this time. Please try again later.'
-        }), 500
-
-
-@app.route('/api/materials/<int:id>', methods=['GET'])
-def api_get_material_by_id(id):
-    """Retrieve a single polymer by its database ID."""
     try:
         polymer = get_polymer_by_id(id)
+
+        if polymer is None:
+            abort(404)
+
+        related = Polymer.query.filter(
+            Polymer.category == polymer.category,
+            Polymer.id != polymer.id,
+        ).limit(3).all()
+
+        return render_template(
+            "material_details.html",
+            material=polymer,
+            related=related,
+        )
+    except Exception:
+        app.logger.exception("MATERIAL DETAILS FAILED")
+        raise
+
+
+# ============================================================
+# Health endpoints
+# ============================================================
+
+@app.route("/health", methods=["GET"])
+@app.route("/api/health", methods=["GET"])
+def health_check():
+    try:
+        db.session.execute(text("SELECT 1"))
+        return jsonify({
+            "status": "healthy",
+            "database": "connected",
+            "version": "1.0.0",
+        }), 200
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("DATABASE HEALTH CHECK FAILED")
+        return jsonify({
+            "status": "degraded",
+            "database": "disconnected",
+            "version": "1.0.0",
+        }), 503
+
+
+@app.route("/test-db", methods=["GET"])
+def test_db():
+    try:
+        db.session.execute(text("SELECT 1"))
+        return jsonify({
+            "success": True,
+            "message": "Database connection successful",
+        }), 200
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("DATABASE TEST FAILED")
+        return jsonify({
+            "success": False,
+            "message": "Database connection failed",
+        }), 500
+
+
+# ============================================================
+# Materials API
+# ============================================================
+
+@app.route("/api/materials", methods=["GET"])
+def api_get_all_materials():
+    try:
+        polymers = get_all_polymers()
+        result = [polymer.to_dict() for polymer in polymers]
+
+        return jsonify({
+            "success": True,
+            "count": len(result),
+            "materials": result,
+        }), 200
+
+    except Exception:
+        db.session.rollback()
+        app.logger.exception("GET ALL MATERIALS FAILED")
+        return jsonify({
+            "success": False,
+            "error": "server_error",
+            "message": "Unable to retrieve materials at this time. Please try again later.",
+        }), 500
+
+
+@app.route("/api/materials/<int:id>", methods=["GET"])
+def api_get_material_by_id(id):
+    try:
+        polymer = get_polymer_by_id(id)
+
         if polymer is None:
             return jsonify({
-                'success': False,
-                'error': 'not_found',
-                'message': f'No material found with ID {id}.'
+                "success": False,
+                "error": "not_found",
+                "message": f"No material found with ID {id}.",
             }), 404
 
         return jsonify({
-            'success': True,
-            'material': polymer.to_dict()
+            "success": True,
+            "material": polymer.to_dict(),
         }), 200
+
     except Exception:
+        db.session.rollback()
+        app.logger.exception("GET MATERIAL BY ID FAILED")
         return jsonify({
-            'success': False,
-            'error': 'server_error',
-            'message': 'Unable to retrieve the requested material. Please try again later.'
+            "success": False,
+            "error": "server_error",
+            "message": "Unable to retrieve the requested material. Please try again later.",
         }), 500
 
 
-@app.route('/api/materials/name/<string:name>', methods=['GET'])
+@app.route("/api/materials/name/<string:name>", methods=["GET"])
 def api_get_material_by_name(name):
-    """Retrieve a single polymer by name (case-insensitive)."""
     try:
         if not name or not name.strip():
             return jsonify({
-                'success': False,
-                'error': 'validation_error',
-                'message': 'Material name cannot be empty.'
+                "success": False,
+                "error": "validation_error",
+                "message": "Material name cannot be empty.",
             }), 400
 
         polymer = get_polymer_by_name(name.strip())
+
         if polymer is None:
             return jsonify({
-                'success': False,
-                'error': 'not_found',
-                'message': f'No material found with the name "{name}".'
+                "success": False,
+                "error": "not_found",
+                "message": f'No material found with the name "{name}".',
             }), 404
 
         return jsonify({
-            'success': True,
-            'material': polymer.to_dict()
+            "success": True,
+            "material": polymer.to_dict(),
         }), 200
+
     except Exception:
+        db.session.rollback()
+        app.logger.exception("GET MATERIAL BY NAME FAILED")
         return jsonify({
-            'success': False,
-            'error': 'server_error',
-            'message': 'Unable to retrieve the requested material. Please try again later.'
+            "success": False,
+            "error": "server_error",
+            "message": "Unable to retrieve the requested material. Please try again later.",
         }), 500
 
 
@@ -176,99 +580,103 @@ def api_get_material_by_name(name):
 # Recommendation API
 # ============================================================
 
-@app.route('/api/recommend', methods=['POST'])
+@app.route("/api/recommend", methods=["POST"])
 def api_recommend():
-    """
-    Validate engineering requirements and generate ranked polymer
-    recommendations using the 100-point rule-based decision algorithm.
-    """
     try:
-        # 1. Content-Type check
         if not request.is_json:
             return jsonify({
-                'success': False,
-                'error': 'validation_error',
-                'message': 'Request must be sent as JSON.'
+                "success": False,
+                "error": "validation_error",
+                "message": "Request must be sent as JSON.",
             }), 400
 
         data = request.get_json(silent=True)
-        if data is None:
+
+        if data is None or not isinstance(data, dict):
             return jsonify({
-                'success': False,
-                'error': 'validation_error',
-                'message': 'Invalid or empty JSON body.'
+                "success": False,
+                "error": "validation_error",
+                "message": "Invalid or empty JSON body.",
             }), 400
 
-        # 2. Required fields validation
         required_fields = [
-            'application', 'strength', 'temperature',
-            'weight', 'chemical_resistance', 'cost'
+            "application",
+            "strength",
+            "temperature",
+            "weight",
+            "chemical_resistance",
+            "cost",
         ]
+
         missing = [
             field for field in required_fields
-            if field not in data or data[field] is None or str(data[field]).strip() == ''
+            if field not in data
+            or data[field] is None
+            or str(data[field]).strip() == ""
         ]
+
         if missing:
             return jsonify({
-                'success': False,
-                'error': 'validation_error',
-                'message': f'Missing required fields: {", ".join(missing)}.'
+                "success": False,
+                "error": "validation_error",
+                "message": f"Missing required fields: {', '.join(missing)}.",
             }), 400
 
-        # 3. Extract and sanitize inputs
-        application = str(data['application']).strip()
-        strength = str(data['strength']).strip().capitalize()
-        weight = str(data['weight']).strip().capitalize()
-        chemical_resistance = str(data['chemical_resistance']).strip().capitalize()
-        cost = str(data['cost']).strip().capitalize()
+        application = str(data["application"]).strip()
+        strength = str(data["strength"]).strip().capitalize()
+        weight = str(data["weight"]).strip().capitalize()
+        chemical_resistance = (
+            str(data["chemical_resistance"]).strip().capitalize()
+        )
+        cost = str(data["cost"]).strip().capitalize()
 
-        # 4. Temperature validation
         try:
-            temperature = int(data['temperature'])
+            temperature = int(data["temperature"])
         except (TypeError, ValueError):
             return jsonify({
-                'success': False,
-                'error': 'validation_error',
-                'message': 'Operating temperature must be a whole number (e.g. 60).'
+                "success": False,
+                "error": "validation_error",
+                "message": "Operating temperature must be a whole number (e.g. 60).",
             }), 400
 
         if temperature < 0 or temperature > 400:
             return jsonify({
-                'success': False,
-                'error': 'validation_error',
-                'message': 'Operating temperature must be between 0°C and 400°C.'
+                "success": False,
+                "error": "validation_error",
+                "message": "Operating temperature must be between 0°C and 400°C.",
             }), 400
 
-        # 5. Allowed categorical values
         allowed = {
-            'strength': ['Low', 'Medium', 'High'],
-            'weight': ['Low', 'Medium', 'High'],
-            'chemical_resistance': ['Low', 'Medium', 'High'],
-            'cost': ['Low', 'Medium', 'High']
+            "strength": ["Low", "Medium", "High"],
+            "weight": ["Low", "Medium", "High"],
+            "chemical_resistance": ["Low", "Medium", "High"],
+            "cost": ["Low", "Medium", "High"],
         }
 
-        for field, value, allowed_list in [
-            ('strength', strength, allowed['strength']),
-            ('weight', weight, allowed['weight']),
-            ('chemical_resistance', chemical_resistance, allowed['chemical_resistance']),
-            ('cost', cost, allowed['cost'])
+        for field, value in [
+            ("strength", strength),
+            ("weight", weight),
+            ("chemical_resistance", chemical_resistance),
+            ("cost", cost),
         ]:
-            if value not in allowed_list:
+            if value not in allowed[field]:
                 return jsonify({
-                    'success': False,
-                    'error': 'validation_error',
-                    'message': f'{field.replace("_", " ").title()} must be one of: {", ".join(allowed_list)}.'
+                    "success": False,
+                    "error": "validation_error",
+                    "message": (
+                        f"{field.replace('_', ' ').title()} must be one of: "
+                        f"{', '.join(allowed[field])}."
+                    ),
                 }), 400
 
-        # 6. Application length check
         if len(application) < 2 or len(application) > 150:
             return jsonify({
-                'success': False,
-                'error': 'validation_error',
-                'message': 'Application type must be between 2 and 150 characters.'
+                "success": False,
+                "error": "validation_error",
+                "message": "Application type must be between 2 and 150 characters.",
             }), 400
 
-        # 7. Execute rule-based recommendation
+        # Generate recommendations using the existing rule-based engine.
         try:
             recommendations = recommend_materials(
                 application=application,
@@ -276,23 +684,25 @@ def api_recommend():
                 operating_temperature=temperature,
                 weight_requirement=weight,
                 chemical_resistance=chemical_resistance,
-                cost_preference=cost
+                cost_preference=cost,
             )
         except Exception:
+            app.logger.exception("RECOMMENDATION ENGINE FAILED")
             return jsonify({
-                'success': False,
-                'error': 'engine_error',
-                'message': 'The recommendation engine encountered a problem. Please try again.'
+                "success": False,
+                "error": "engine_error",
+                "message": "The recommendation engine encountered a problem. Please try again.",
             }), 500
 
         if not recommendations:
             return jsonify({
-                'success': False,
-                'error': 'no_results',
-                'message': 'No suitable materials found for the given requirements. Try adjusting your inputs.'
+                "success": False,
+                "error": "no_results",
+                "message": "No suitable materials found. Try adjusting your inputs.",
             }), 200
 
-        # 8. Save recommendation history (non-critical write)
+        # History is non-critical: a history write failure must not
+        # prevent an otherwise successful recommendation response.
         try:
             history_entry = RecommendationHistory(
                 application=application,
@@ -301,73 +711,95 @@ def api_recommend():
                 weight_requirement=weight,
                 chemical_resistance=chemical_resistance,
                 cost_preference=cost,
-                recommendation_result=json.dumps(recommendations)
+                recommendation_result=json.dumps(recommendations),
             )
             db.session.add(history_entry)
             db.session.commit()
+
         except Exception:
             db.session.rollback()
+            app.logger.exception("SAVING RECOMMENDATION HISTORY FAILED")
 
-        # 9. Return success response
         return jsonify({
-            'success': True,
-            'count': len(recommendations),
-            'message': 'Recommendations generated successfully.',
-            'recommendations': recommendations
+            "success": True,
+            "count": len(recommendations),
+            "message": "Recommendations generated successfully.",
+            "recommendations": recommendations,
         }), 200
 
     except Exception:
-        # Catch-all to prevent stack trace leaks
+        db.session.rollback()
+        app.logger.exception("RECOMMENDATION API FAILED")
         return jsonify({
-            'success': False,
-            'error': 'server_error',
-            'message': 'An unexpected error occurred. Please try again later.'
+            "success": False,
+            "error": "server_error",
+            "message": "An unexpected error occurred. Please try again later.",
         }), 500
 
 
 # ============================================================
-# Error Handlers
+# Error handlers
 # ============================================================
 
 @app.errorhandler(404)
-def not_found(e):
-    if request.path.startswith('/api/'):
+def not_found(error):
+    if request.path.startswith("/api/"):
         return jsonify({
-            'success': False,
-            'error': 'not_found',
-            'message': 'The requested API endpoint was not found.'
+            "success": False,
+            "error": "not_found",
+            "message": "The requested API endpoint was not found.",
         }), 404
-    return render_template('index.html'), 404
+
+    return render_template("index.html"), 404
 
 
 @app.errorhandler(500)
-def server_error(e):
-    if request.path.startswith('/api/'):
+def server_error(error):
+    app.logger.error(
+        "UNHANDLED HTTP 500 ERROR on %s",
+        request.path,
+        exc_info=True,
+    )
+
+    if request.path.startswith("/api/"):
         return jsonify({
-            'success': False,
-            'error': 'server_error',
-            'message': 'Internal server error occurred.'
+            "success": False,
+            "error": "server_error",
+            "message": "Internal server error occurred.",
         }), 500
+
     return "An internal server error occurred. Please try again later.", 500
 
 
 # ============================================================
-# CLI Database Commands
+# Database initialization CLI
 # ============================================================
 
-@app.cli.command('init-db')
+@app.cli.command("init-db")
 def init_db_command():
-    """CLI command to create database tables and seed default polymer materials safely."""
+    """Create database tables and seed default polymer materials."""
     with app.app_context():
-        db.create_all()
-        inserted, total = seed_database()
-        print(f"Database schema verified. Seeded {inserted} new materials. Total materials: {total}.")
+        try:
+            db.create_all()
+            inserted, total = seed_database()
+            print(
+                f"Database schema verified. Seeded {inserted} new materials. "
+                f"Total materials: {total}."
+            )
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("DATABASE INITIALIZATION FAILED")
+            raise
 
 
 # ============================================================
-# Production / Local Startup
+# Application startup
 # ============================================================
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=Config.DEBUG)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=Config.DEBUG,
+    )
