@@ -1,13 +1,13 @@
 import os
 from dotenv import load_dotenv
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse, parse_qs, urlencode, urlunparse
 
 # Load environment variables from .env file
 load_dotenv()
 
 
 def build_database_uri():
-    """Build SQLAlchemy database URI from environment variables with safe driver prefix and encoding."""
+    """Build SQLAlchemy database URI from environment variables with safe driver prefix, query sanitization and encoding."""
     # Check for direct DATABASE_URL or MYSQL_URL (common on Render, Railway, Aiven, etc.)
     database_url = os.getenv('DATABASE_URL') or os.getenv('MYSQL_URL')
     if database_url:
@@ -17,6 +17,17 @@ def build_database_uri():
             database_url = 'mysql+pymysql://' + database_url[len('mysql://'):]
         elif database_url.startswith('mysql2://'):
             database_url = 'mysql+pymysql://' + database_url[len('mysql2://'):]
+
+        # Aiven and some other cloud providers append ?ssl-mode=REQUIRED which PyMySQL rejects as an unexpected kwarg.
+        # Clean query parameters that PyMySQL does not accept natively in URL strings.
+        parsed = urlparse(database_url)
+        if parsed.query:
+            query_params = parse_qs(parsed.query)
+            for bad_key in ['ssl-mode', 'ssl_mode']:
+                query_params.pop(bad_key, None)
+            new_query = urlencode(query_params, doseq=True)
+            database_url = urlunparse(parsed._replace(query=new_query))
+
         return database_url
 
     # Fallback to discrete parameters
@@ -54,6 +65,22 @@ class Config:
     SQLALCHEMY_DATABASE_URI = build_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    # Build connection args (including SSL support for remote / Aiven MySQL databases)
+    connect_args = {
+        'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '10'))
+    }
+
+    db_uri_lower = SQLALCHEMY_DATABASE_URI.lower()
+    is_remote = not ('localhost' in db_uri_lower or '127.0.0.1' in db_uri_lower)
+    enable_ssl = os.getenv('DB_SSL', '').lower() in ['1', 'true', 'required'] or 'aiven' in db_uri_lower or (is_remote and os.getenv('DB_SSL', '').lower() != 'false')
+
+    if enable_ssl and is_remote:
+        ssl_config = {'check_hostname': False}
+        ca_path = os.getenv('DB_SSL_CA')
+        if ca_path and os.path.exists(ca_path):
+            ssl_config['ca'] = ca_path
+        connect_args['ssl'] = ssl_config
+
     # Production database pool and connection settings
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
@@ -61,10 +88,7 @@ class Config:
         'pool_size': int(os.getenv('DB_POOL_SIZE', '5')),
         'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', '10')),
         'pool_timeout': int(os.getenv('DB_POOL_TIMEOUT', '30')),
-        'connect_args': {
-            'connect_timeout': int(os.getenv('DB_CONNECT_TIMEOUT', '10')),
-             'ssl': {}
-        }
+        'connect_args': connect_args
     }
 
     # Debug mode (defaults to False in production)
