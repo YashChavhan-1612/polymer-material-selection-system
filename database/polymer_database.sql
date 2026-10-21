@@ -132,6 +132,23 @@ VALUES
  'Flexible, excellent moisture resistance, good chemical resistance, low cost, good impact strength',
  'Low stiffness, limited temperature resistance, relatively low tensile strength',
  'Plastic bags, films, squeeze bottles, liners, tubing, flexible packaging',
+ NULL),
+
+ ('PC', 'Engineering Thermoplastic',
+ 'Polycarbonate is a strong, transparent engineering plastic with excellent impact resistance and good dimensional stability.',
+ 65.00, 120, 1.200, 'Good', 'High',
+ 'Excellent impact strength, transparent, good dimensional stability, good heat resistance',
+ 'Poor resistance to some chemicals and UV (without additives), higher cost, can stress crack',
+ 'Safety glasses, electronic housings, automotive headlamps, medical devices, CDs/DVDs',
+ NULL),
+
+-- Polymer 2
+('POM', 'Engineering Thermoplastic',
+ 'Polyoxymethylene (Acetal) is a high-strength engineering plastic known for excellent wear resistance, low friction and good dimensional stability.',
+ 70.00, 100, 1.410, 'Good', 'High',
+ 'High strength and stiffness, excellent wear resistance, low friction, good dimensional stability',
+ 'Poor resistance to strong acids and bases, can degrade at high temperatures, higher cost',
+ 'Gears, bearings, bushings, fasteners, automotive parts, precision mechanical components',
  NULL);
 
 
