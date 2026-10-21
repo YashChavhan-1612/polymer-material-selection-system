@@ -57,6 +57,12 @@ def home():
     return render_template("index.html")
 
 
+@app.route("/materials")
+def materials_catalog():
+    """Serve the complete polymer materials catalog page."""
+    return render_template("materials.html")
+
+
 @app.route("/material/<int:id>")
 def material_details(id):
     """Serve the detailed property view for a specific polymer."""

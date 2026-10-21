@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Polymer Materials (100+ Catalog) | PolySelect</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .catalog-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.75rem;
+            background: var(--surface);
+            padding: 1.25rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+        .search-box {
+            position: relative;
+            flex: 1 1 320px;
+        }
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.6rem;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color var(--transition);
+        }
+        .search-box input:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.15);
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .filter-select {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            background: #fff;
+            color: var(--text);
+            font-size: 0.95rem;
+            outline: none;
+            cursor: pointer;
+        }
+        .filter-select:focus {
+            border-color: var(--primary-light);
+        }
+        .catalog-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+        .category-badge {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--secondary-dark);
+            margin-bottom: 0.35rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <i class="fas fa-atom"></i>
+                <span>PolySelect</span>
+            </a>
+            <ul class="nav-links" id="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/#about">About</a></li>
+                <li><a href="/#features">Features</a></li>
+                <li><a href="/materials" style="color: var(--primary-light); font-weight: 700;">All Polymers</a></li>
+                <li><a href="/#recommend" class="btn-nav">Get Recommendation</a></li>
+            </ul>
+            <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="material-hero">
+        <div class="container">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+                <a href="/" style="color: rgba(255,255,255,0.85); text-decoration: none;">Home</a>
+                <span class="separator">/</span>
+                <span aria-current="page">All Polymer Materials</span>
+            </nav>
+            <h1>Polymer Materials Catalog</h1>
+            <p class="material-category">Complete database of 100+ engineering polymers, thermoplastics, elastomers, thermosets &amp; composites</p>
+        </div>
+    </section>
+
+    <!-- Main Catalog Section -->
+    <section class="section">
+        <div class="container">
+
+            <!-- Search and Filter Bar -->
+            <div class="catalog-controls">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="catalog-search" placeholder="Search by name, category, or keyword (e.g. PEEK, Nylon, Tubing, High Temp)...">
+                </div>
+                <div class="filter-group">
+                    <label for="category-filter" style="font-weight: 600; font-size: 0.9rem; color: var(--text-secondary);"><i class="fas fa-filter"></i> Category:</label>
+                    <select id="category-filter" class="filter-select">
+                        <option value="ALL">All Categories</option>
+                        <option value="Thermoplastic">Thermoplastic</option>
+                        <option value="Engineering Thermoplastic">Engineering Thermoplastic</option>
+                        <option value="High-Performance Polymer">High-Performance Polymer</option>
+                        <option value="Fluoropolymer">Fluoropolymer</option>
+                        <option value="Thermoset">Thermoset</option>
+                        <option value="Thermoplastic Elastomer">Thermoplastic Elastomer</option>
+                        <option value="Elastomer">Elastomer / Rubber</option>
+                        <option value="Biopolymer">Biopolymer / Bio-Based</option>
+                        <option value="Reinforced Composite">Reinforced Composite</option>
+                        <option value="Specialty">Specialty Polymer</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Result Count & Quick Reset -->
+            <div class="catalog-meta">
+                <span id="catalog-count-text">Loading catalog materials…</span>
+                <button type="button" id="reset-filters-btn" class="btn btn-outline" style="padding: 0.4rem 0.9rem; font-size: 0.85rem;">
+                    <i class="fas fa-redo"></i> Reset Filters
+                </button>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="catalog-loading" class="loading">
+                <div class="spinner"></div>
+                <p>Loading full polymer materials database…</p>
+            </div>
+
+            <!-- Materials Grid -->
+            <div class="materials-grid" id="all-materials-grid">
+                <!-- Dynamically populated by JavaScript -->
+            </div>
+
+            <!-- Empty Search State -->
+            <div id="catalog-empty-state" class="state-message empty hidden">
+                <i class="fas fa-search"></i>
+                <h3>No matching polymers found</h3>
+                <p>No materials matched your search criteria. Try a different keyword or category.</p>
+                <br>
+                <button type="button" class="btn btn-primary" onclick="clearCatalogFilters()">
+                    <i class="fas fa-redo"></i> Show All Polymers
+                </button>
+            </div>
+
+            <!-- Bottom Action CTA -->
+            <div style="text-align: center; margin-top: 3.5rem; padding: 2.5rem 1.5rem; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+                <h3 style="margin-bottom: 0.5rem; color: var(--primary);">Need a specific material recommendation?</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; max-width: 600px; margin-inline: auto;">
+                    Use our 100-point multi-attribute rule-based decision algorithm to find the top 3 ranked polymers for your operating parameters.
+                </p>
+                <a href="/#recommend" class="btn btn-primary" style="padding: 0.85rem 2.2rem; font-size: 1rem; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 0.6rem;">
+                    <i class="fas fa-calculator"></i>
+                    <span>Run Recommendation Engine</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer-title">Polymer Material Selection &amp; Recommendation System</p>
+            <p class="footer-sub">Rule-Based Decision Making · Flask · MySQL · HTML / CSS / JavaScript</p>
+            <p class="footer-copy">Final Year Engineering Project &copy; 2026</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

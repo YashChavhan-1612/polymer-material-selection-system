@@ -5,7 +5,7 @@
 const API_BASE_URL = window.API_BASE_URL || '';
 
 /* ============================================================
-   PolySelect – Frontend Validation & Error Handling
+   PolySelect – Navigation & Mobile Menu
    ============================================================ */
 
 const hamburger = document.getElementById('hamburger');
@@ -23,8 +23,37 @@ document.querySelectorAll('.nav-links a').forEach(link => {
     });
 });
 
-/* ---------- Load materials overview ---------- */
-async function loadMaterials() {
+/* ============================================================
+   Material Cards & Rendering Helpers
+   ============================================================ */
+
+let allMaterialsCache = [];
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function renderMaterialCard(mat) {
+    const card = document.createElement('a');
+    card.className = 'material-card';
+    card.href = `/material/${encodeURIComponent(mat.id)}`;
+    card.innerHTML = `
+        <span style="display:inline-block;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);margin-bottom:0.25rem;">
+            ${escapeHtml(mat.category)}
+        </span>
+        <h3 style="margin-bottom:0.4rem;font-size:1.15rem;">${escapeHtml(mat.name)}</h3>
+        <p class="material-meta" style="font-size:0.85rem;color:var(--text-muted);">
+            ${escapeHtml(String(mat.strength))} MPa · ${escapeHtml(String(mat.max_temperature))}°C · ${escapeHtml(mat.cost)}
+        </p>
+    `;
+    return card;
+}
+
+/* ---------- Load Featured Materials (Home Page: 5 materials) ---------- */
+async function loadHomeFeaturedMaterials() {
     const grid = document.getElementById('materials-grid');
     if (!grid) return;
 
@@ -34,33 +63,121 @@ async function loadMaterials() {
 
         if (data.success && Array.isArray(data.materials)) {
             grid.innerHTML = '';
-            data.materials.forEach(mat => {
-                const card = document.createElement('a');
-                card.className = 'material-card';
-                card.href = `/material/${encodeURIComponent(mat.id)}`;
-                card.innerHTML = `
-                    <h3>${escapeHtml(mat.name)}</h3>
-                    <p class="category">${escapeHtml(mat.category)}</p>
-                    <p class="material-meta">
-                        ${escapeHtml(String(mat.strength))} MPa · ${escapeHtml(String(mat.max_temperature))}°C · ${escapeHtml(mat.cost)}
-                    </p>
-                `;
-                grid.appendChild(card);
+            // Display only 5 featured polymers on the home page
+            const limit = grid.dataset.limit ? parseInt(grid.dataset.limit, 10) : 5;
+            const featured = data.materials.slice(0, limit);
+            featured.forEach(mat => {
+                grid.appendChild(renderMaterialCard(mat));
             });
         }
     } catch (err) {
-        console.error('Materials load failed', err);
-        // Silent fail – overview is not critical
+        console.error('Featured materials load failed', err);
     }
 }
 
-/* ---------- Helpers ---------- */
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+/* ---------- Load Full Catalog (/materials page: 100+ materials) ---------- */
+async function loadCatalogMaterials() {
+    const allGrid = document.getElementById('all-materials-grid');
+    if (!allGrid) return;
+
+    const countText = document.getElementById('catalog-count-text');
+    const loadingEl = document.getElementById('catalog-loading');
+    const searchInput = document.getElementById('catalog-search');
+    const categorySelect = document.getElementById('category-filter');
+    const resetBtn = document.getElementById('reset-filters-btn');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/materials`);
+        const data = await response.json();
+
+        if (loadingEl) loadingEl.classList.add('hidden');
+
+        if (data.success && Array.isArray(data.materials)) {
+            allMaterialsCache = data.materials;
+            renderFilteredCatalog();
+
+            if (searchInput) {
+                searchInput.addEventListener('input', renderFilteredCatalog);
+            }
+            if (categorySelect) {
+                categorySelect.addEventListener('change', renderFilteredCatalog);
+            }
+            if (resetBtn) {
+                resetBtn.addEventListener('click', clearCatalogFilters);
+            }
+        } else {
+            if (countText) countText.textContent = 'Unable to load catalog at this time.';
+        }
+    } catch (err) {
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (countText) countText.textContent = 'Error loading materials catalog.';
+        console.error('Catalog load failed', err);
+    }
 }
+
+function renderFilteredCatalog() {
+    const allGrid = document.getElementById('all-materials-grid');
+    if (!allGrid) return;
+
+    const countText = document.getElementById('catalog-count-text');
+    const searchInput = document.getElementById('catalog-search');
+    const categorySelect = document.getElementById('category-filter');
+    const emptyState = document.getElementById('catalog-empty-state');
+
+    const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const selectedCategory = categorySelect ? categorySelect.value : 'ALL';
+
+    const filtered = allMaterialsCache.filter(mat => {
+        // Category filter
+        if (selectedCategory !== 'ALL') {
+            const matCat = (mat.category || '').toLowerCase();
+            const targetCat = selectedCategory.toLowerCase();
+            if (!matCat.includes(targetCat)) return false;
+        }
+
+        // Text search (name, category, applications, description)
+        if (query) {
+            const name = (mat.name || '').toLowerCase();
+            const category = (mat.category || '').toLowerCase();
+            const apps = (mat.applications || '').toLowerCase();
+            const desc = (mat.description || '').toLowerCase();
+            return name.includes(query) || category.includes(query) || apps.includes(query) || desc.includes(query);
+        }
+
+        return true;
+    });
+
+    allGrid.innerHTML = '';
+
+    if (filtered.length === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (countText) countText.textContent = `0 of ${allMaterialsCache.length} materials match your filters`;
+    } else {
+        if (emptyState) emptyState.classList.add('hidden');
+        if (countText) {
+            if (filtered.length === allMaterialsCache.length) {
+                countText.textContent = `Showing all ${allMaterialsCache.length} engineering materials`;
+            } else {
+                countText.textContent = `Showing ${filtered.length} of ${allMaterialsCache.length} materials`;
+            }
+        }
+        filtered.forEach(mat => {
+            allGrid.appendChild(renderMaterialCard(mat));
+        });
+    }
+}
+
+function clearCatalogFilters() {
+    const searchInput = document.getElementById('catalog-search');
+    const categorySelect = document.getElementById('category-filter');
+    if (searchInput) searchInput.value = '';
+    if (categorySelect) categorySelect.value = 'ALL';
+    renderFilteredCatalog();
+}
+
+/* ============================================================
+   Form Validation & Recommendation Submission
+   ============================================================ */
 
 function showLoading(show) {
     const loading = document.getElementById('loading');
@@ -69,7 +186,6 @@ function showLoading(show) {
     if (submitBtn) submitBtn.disabled = show;
 }
 
-/* ---------- Form Validation ---------- */
 function validateForm() {
     const applicationEl = document.getElementById('application');
     const strengthEl = document.getElementById('strength');
@@ -168,7 +284,6 @@ if (form) {
             } else if (data.success && data.recommendations && data.recommendations.length === 0) {
                 showEmptyState(data.message || 'No suitable materials found. Try adjusting your requirements.');
             } else {
-                // Backend validation or other error
                 showErrorState(data.message || 'Unable to generate recommendations. Please check your inputs and try again.');
             }
         } catch (err) {
@@ -293,5 +408,8 @@ function resetForm() {
     }
 }
 
-/* ---------- Init ---------- */
-document.addEventListener('DOMContentLoaded', loadMaterials);
+/* ---------- Initialization ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+    loadHomeFeaturedMaterials();
+    loadCatalogMaterials();
+});
