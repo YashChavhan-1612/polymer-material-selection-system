@@ -132,7 +132,8 @@
 
         .optional-search-wrap {
             position: relative;
-            min-width: 260px;
+            flex: 1 1 200px;
+            max-width: 100%;
         }
 
         .optional-search-wrap i {
@@ -274,6 +275,9 @@
 </head>
 <body>
 
+    <!-- Backdrop overlay for mobile sidebar -->
+    <div class="nav-backdrop" id="nav-backdrop"></div>
+
     <!-- Navigation -->
     <nav class="navbar" id="navbar">
         <div class="container nav-container">
@@ -282,12 +286,16 @@
                 <span>PolySelect</span>
             </a>
             <ul class="nav-links" id="nav-links">
+                <li class="nav-drawer-header">
+                    <span>Menu</span>
+                    <button type="button" class="nav-close-btn" id="nav-close-btn" aria-label="Close menu">&times;</button>
+                </li>
                 <li><a href="/">Home</a></li>
                 <li><a href="/#about">About</a></li>
                 <li><a href="/#features">Features</a></li>
                 <li><a href="/#how-it-works">How It Works</a></li>
                 <li><a href="/materials" style="color: var(--primary-light); font-weight: 700;">All Polymers</a></li>
-                <li><a href="/#recommend" class="btn-nav">Get Recommendation</a></li>
+                <li><a href="/recommend" class="btn-nav">Get Recommendation</a></li>
             </ul>
             <button class="hamburger" id="hamburger" aria-label="Toggle menu">
                 <span></span>
@@ -431,7 +439,7 @@
                 <p style="color: var(--text-secondary); margin-bottom: 1.5rem; max-width: 620px; margin-inline: auto;">
                     Use our 100-point multi-attribute rule-based decision engine to evaluate your strength, temperature, weight, chemical and cost constraints.
                 </p>
-                <a href="/#recommend" class="btn btn-primary" style="padding: 0.85rem 2.2rem; font-size: 1rem; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 0.6rem;">
+                <a href="/recommend" class="btn btn-primary" style="padding: 0.85rem 2.2rem; font-size: 1rem; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 0.6rem;">
                     <i class="fas fa-calculator"></i>
                     <span>Run Recommendation Engine</span>
                     <i class="fas fa-arrow-right"></i>

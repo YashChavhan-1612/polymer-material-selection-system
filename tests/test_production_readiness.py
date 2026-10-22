@@ -245,6 +245,17 @@ class TestProductionReadiness(unittest.TestCase):
         self.assertEqual(first.name, 'HDPE')
         self.assertIn('strength', first.to_dict())
 
+    def test_19_recommendation_dedicated_page(self):
+        """Test that /recommend and /recommendation render the dedicated recommendation UI."""
+        r1 = self.client.get('/recommend')
+        self.assertEqual(r1.status_code, 200)
+        content1 = r1.get_data(as_text=True)
+        self.assertIn('Material Recommendation Engine', content1)
+        self.assertIn('recommendation-form', content1)
+
+        r2 = self.client.get('/recommendation')
+        self.assertEqual(r2.status_code, 200)
+
 
 if __name__ == '__main__':
     unittest.main()

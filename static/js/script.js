@@ -5,23 +5,58 @@
 const API_BASE_URL = window.API_BASE_URL || '';
 
 /* ============================================================
-   PolySelect – Navigation & Mobile Menu
+   PolySelect – Navigation & Mobile Menu with Backdrop & Scroll Lock
    ============================================================ */
 
-const hamburger = document.getElementById('hamburger');
-const navLinks = document.getElementById('nav-links');
+function setupNavigation() {
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('nav-links');
+    const backdrop = document.getElementById('nav-backdrop');
+    const closeBtn = document.getElementById('nav-close-btn');
 
-if (hamburger) {
-    hamburger.addEventListener('click', () => {
-        navLinks.classList.toggle('active');
+    function openMenu() {
+        if (navLinks) navLinks.classList.add('active');
+        if (backdrop) backdrop.classList.add('active');
+        if (hamburger) hamburger.classList.add('open');
+        document.body.classList.add('menu-open');
+    }
+
+    function closeMenu() {
+        if (navLinks) navLinks.classList.remove('active');
+        if (backdrop) backdrop.classList.remove('active');
+        if (hamburger) hamburger.classList.remove('open');
+        document.body.classList.remove('menu-open');
+    }
+
+    if (hamburger) {
+        hamburger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (navLinks && navLinks.classList.contains('active')) {
+                closeMenu();
+            } else {
+                openMenu();
+            }
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeMenu);
+    }
+
+    if (backdrop) {
+        backdrop.addEventListener('click', closeMenu);
+    }
+
+    // Close menu when clicking any nav link
+    document.querySelectorAll('.nav-links a').forEach(link => {
+        link.addEventListener('click', closeMenu);
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMenu();
     });
 }
-
-document.querySelectorAll('.nav-links a').forEach(link => {
-    link.addEventListener('click', () => {
-        navLinks.classList.remove('active');
-    });
-});
 
 /* ============================================================
    Material Cards & Rendering Helpers
@@ -487,6 +522,11 @@ function displayResults(recommendations) {
                     <div class="result-section-title"><i class="fas fa-info-circle"></i> Limitations</div>
                     <p style="color:var(--text-secondary);font-size:0.92rem;">${escapeHtml(rec.limitations || '—')}</p>
                 </div>
+                <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid var(--border);">
+                    <a href="/material/${encodeURIComponent(rec.material_id)}" class="btn btn-outline" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;padding:0.45rem 1rem;">
+                        <i class="fas fa-file-alt"></i> View Full Specifications &amp; Properties &rarr;
+                    </a>
+                </div>
             </div>
         `;
     });
@@ -542,6 +582,7 @@ function resetForm() {
 
 /* ---------- Initialization ---------- */
 document.addEventListener('DOMContentLoaded', () => {
+    setupNavigation();
     if (document.getElementById('materials-grid')) {
         loadHomeFeaturedMaterials();
     }

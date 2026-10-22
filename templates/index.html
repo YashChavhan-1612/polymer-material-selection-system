@@ -9,6 +9,9 @@
 </head>
 <body>
 
+    <!-- Backdrop overlay for mobile sidebar -->
+    <div class="nav-backdrop" id="nav-backdrop"></div>
+
     <!-- Navigation -->
     <nav class="navbar" id="navbar">
         <div class="container nav-container">
@@ -17,12 +20,16 @@
                 <span>PolySelect</span>
             </a>
             <ul class="nav-links" id="nav-links">
+                <li class="nav-drawer-header">
+                    <span>Menu</span>
+                    <button type="button" class="nav-close-btn" id="nav-close-btn" aria-label="Close menu">&times;</button>
+                </li>
                 <li><a href="#home">Home</a></li>
                 <li><a href="#about">About</a></li>
                 <li><a href="#features">Features</a></li>
                 <li><a href="#how-it-works">How It Works</a></li>
                 <li><a href="/materials">All Polymers</a></li>
-                <li><a href="#recommend" class="btn-nav">Get Recommendation</a></li>
+                <li><a href="/recommend" class="btn-nav">Get Recommendation</a></li>
             </ul>
             <button class="hamburger" id="hamburger" aria-label="Toggle menu">
                 <span></span>
@@ -42,7 +49,7 @@
                 engineering polymers based on your application requirements.
             </p>
             <div class="hero-actions">
-                <a href="#recommend" class="btn btn-primary">Start Recommendation</a>
+                <a href="/recommend" class="btn btn-primary"><i class="fas fa-calculator"></i> Start Recommendation</a>
                 <a href="#how-it-works" class="btn btn-ghost">How It Works</a>
             </div>
         </div>
@@ -118,80 +125,36 @@
         </div>
     </section>
 
-    <!-- Recommendation Form -->
+    <!-- Recommendation Engine Showcase -->
     <section class="section section-alt" id="recommend">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Material Recommendation</h2>
-                <p class="section-subtitle">Enter your engineering requirements to receive ranked polymer suggestions</p>
+                <h2 class="section-title">Material Recommendation Engine</h2>
+                <p class="section-subtitle">Multi-attribute rule-based decision support for polymer engineering</p>
             </div>
 
-            <form id="recommendation-form" class="recommendation-form">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="application">Application Type</label>
-                        <input type="text" id="application" name="application" placeholder="e.g. Water Pipe, Food Container, Automotive Part" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="strength">Required Strength</label>
-                        <select id="strength" name="strength" required>
-                            <option value="">Select strength</option>
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="temperature">Operating Temperature (°C)</label>
-                        <input type="number" id="temperature" name="temperature" placeholder="e.g. 60" min="0" max="400" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="weight">Weight Requirement</label>
-                        <select id="weight" name="weight" required>
-                            <option value="">Select weight</option>
-                            <option value="Low">Low (Light)</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High (Heavy)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="chemical_resistance">Chemical Resistance</label>
-                        <select id="chemical_resistance" name="chemical_resistance" required>
-                            <option value="">Select level</option>
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="cost">Cost Preference</label>
-                        <select id="cost" name="cost" required>
-                            <option value="">Select cost</option>
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                        </select>
-                    </div>
+            <div style="max-width: 820px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2.5rem 2rem; box-shadow: var(--shadow-sm); text-align: center;">
+                <div style="width: 64px; height: 64px; margin: 0 auto 1.25rem; border-radius: 16px; background: rgba(12, 74, 110, 0.08); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.8rem;">
+                    <i class="fas fa-sliders-h"></i>
                 </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary" id="submit-btn">
-                        <i class="fas fa-search"></i> Get Recommendations
-                    </button>
+                <h3 style="font-size: 1.35rem; color: var(--primary); margin-bottom: 0.75rem;">
+                    Find the Optimal Polymer for Your Application
+                </h3>
+                <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 1.75rem; font-size: 0.98rem; max-width: 650px; margin-inline: auto;">
+                    Input your required tensile strength, continuous operating temperature, weight target, chemical resistance, and cost preference. Our 100-point transparent decision algorithm scores and ranks all 100+ polymers in real time.
+                </p>
+                <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                    <a href="/recommend" class="btn btn-primary" style="padding: 0.85rem 2.2rem; font-size: 1.05rem; display: inline-flex; align-items: center; gap: 0.6rem;">
+                        <i class="fas fa-calculator"></i>
+                        <span>Start Recommendation</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                    <a href="/materials" class="btn btn-outline" style="padding: 0.85rem 1.8rem; font-size: 1.05rem; display: inline-flex; align-items: center; gap: 0.6rem;">
+                        <i class="fas fa-layer-group"></i>
+                        <span>Browse 100+ Materials</span>
+                    </a>
                 </div>
-            </form>
-
-            <div id="loading" class="loading hidden">
-                <div class="spinner"></div>
-                <p>Evaluating materials against your requirements…</p>
             </div>
-
-            <div id="results" class="results hidden"></div>
         </div>
     </section>
 

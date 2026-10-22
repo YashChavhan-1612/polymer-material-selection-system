@@ -67,6 +67,13 @@ def materials_catalog():
     return render_template("materials.html", initial_materials=materials_list)
 
 
+@app.route("/recommend")
+@app.route("/recommendation")
+def recommendation_page():
+    """Serve the dedicated interactive polymer recommendation engine page."""
+    return render_template("recommend.html")
+
+
 @app.route("/material/<int:id>")
 def material_details(id):
     """Serve the detailed property view for a specific polymer."""

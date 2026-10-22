@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material Recommendation Engine | PolySelect</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .recommend-hero {
+            background: linear-gradient(160deg, #0c4a6e 0%, #0e7490 100%);
+            color: #ffffff;
+            padding: 2.5rem 0 2rem;
+        }
+
+        .recommend-intro-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+        }
+
+        .intro-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            background: rgba(12, 74, 110, 0.08);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .intro-text h3 {
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .intro-text p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .form-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2rem;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 2.5rem;
+        }
+
+        .form-card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .form-card-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 1.75rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-hint {
+            display: block;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+        }
+
+        @media (max-width: 768px) {
+            .recommend-intro-card {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 1.25rem;
+            }
+            .form-card {
+                padding: 1.25rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Backdrop overlay for mobile sidebar -->
+    <div class="nav-backdrop" id="nav-backdrop"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="container nav-container">
+            <a href="/" class="logo">
+                <i class="fas fa-atom"></i>
+                <span>PolySelect</span>
+            </a>
+            <ul class="nav-links" id="nav-links">
+                <li class="nav-drawer-header">
+                    <span>Menu</span>
+                    <button type="button" class="nav-close-btn" id="nav-close-btn" aria-label="Close menu">&times;</button>
+                </li>
+                <li><a href="/">Home</a></li>
+                <li><a href="/#about">About</a></li>
+                <li><a href="/#features">Features</a></li>
+                <li><a href="/#how-it-works">How It Works</a></li>
+                <li><a href="/materials">All Polymers</a></li>
+                <li><a href="/recommend" class="btn-nav" style="background: var(--secondary) !important;">Get Recommendation</a></li>
+            </ul>
+            <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="recommend-hero">
+        <div class="container">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+                <a href="/" style="color: rgba(255,255,255,0.85); text-decoration: none;">Home</a>
+                <span class="separator">/</span>
+                <span aria-current="page">Material Recommendation Engine</span>
+            </nav>
+            <h1>Polymer Material Recommendation Engine</h1>
+            <p class="material-category">100-Point Multi-Attribute Rule-Based Decision Support System for Engineering Polymers</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="section">
+        <div class="container">
+
+            <!-- Intro Info Card -->
+            <div class="recommend-intro-card">
+                <div class="intro-icon">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <div class="intro-text">
+                    <h3>Transparent Rule-Based Scoring Algorithm</h3>
+                    <p>
+                        Each polymer in our 100+ materials database is evaluated across 6 weighted engineering attributes: 
+                        <strong>Application Suitability (25 pts)</strong>, <strong>Tensile Strength (20 pts)</strong>, 
+                        <strong>Thermal Resistance (20 pts)</strong>, <strong>Chemical Resistance (15 pts)</strong>, 
+                        <strong>Cost Compatibility (10 pts)</strong>, and <strong>Weight/Density (10 pts)</strong>.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Recommendation Form Card -->
+            <div class="form-card">
+                <h2 class="form-card-title">
+                    <i class="fas fa-sliders-h"></i>
+                    Input Operating Requirements
+                </h2>
+                <p class="form-card-subtitle">
+                    Specify your product's service conditions to compute compatibility scores and receive the top 3 ranked polymer candidates.
+                </p>
+
+                <form id="recommendation-form" class="recommendation-form-inner">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="application">Application Type <span style="color: var(--danger);">*</span></label>
+                            <input type="text" id="application" name="application" list="application-suggestions" placeholder="e.g. Water Pipe, Food Packaging, Fuel Line" required autocomplete="off">
+                            <datalist id="application-suggestions">
+                                <option value="Water Pipe">
+                                <option value="Food Packaging">
+                                <option value="Automotive Fuel Line">
+                                <option value="Chemical Storage Tank">
+                                <option value="Medical Syringe">
+                                <option value="Electrical Connector">
+                                <option value="Aerospace Structural Bracket">
+                                <option value="High-Temperature Gasket">
+                                <option value="Under-the-Hood Automotive Part">
+                                <option value="Precision Gear and Bushing">
+                                <option value="Optical Lens and Screen">
+                                <option value="Biodegradable Cutlery">
+                            </datalist>
+                            <span class="form-hint">Type of product or engineering component</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="strength">Required Strength <span style="color: var(--danger);">*</span></label>
+                            <select id="strength" name="strength" required>
+                                <option value="">Select strength level</option>
+                                <option value="Low">Low (&lt; 35 MPa - Flexible, non-load)</option>
+                                <option value="Medium">Medium (35 – 70 MPa - Semi-structural)</option>
+                                <option value="High">High (&gt; 70 MPa - Heavy structural loads)</option>
+                            </select>
+                            <span class="form-hint">Tensile load capability</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="temperature">Max Operating Temp (°C) <span style="color: var(--danger);">*</span></label>
+                            <input type="number" id="temperature" name="temperature" placeholder="e.g. 85" min="0" max="400" required>
+                            <span class="form-hint">Continuous service temperature (0 – 400°C)</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="weight">Weight Requirement <span style="color: var(--danger);">*</span></label>
+                            <select id="weight" name="weight" required>
+                                <option value="">Select weight preference</option>
+                                <option value="Low">Low (Lightweight density &lt; 1.1 g/cm³)</option>
+                                <option value="Medium">Medium (Density 1.1 – 1.4 g/cm³)</option>
+                                <option value="High">High (Heavier / filled &gt; 1.4 g/cm³)</option>
+                            </select>
+                            <span class="form-hint">Component density and weight target</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="chemical_resistance">Chemical Environment <span style="color: var(--danger);">*</span></label>
+                            <select id="chemical_resistance" name="chemical_resistance" required>
+                                <option value="">Select exposure level</option>
+                                <option value="Low">Low (Water, air, mild moisture only)</option>
+                                <option value="Medium">Medium (Oils, greases, mild detergents)</option>
+                                <option value="High">High (Strong acids, bases, harsh industrial solvents)</option>
+                            </select>
+                            <span class="form-hint">Fluid and chemical exposure level</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cost">Cost Preference <span style="color: var(--danger);">*</span></label>
+                            <select id="cost" name="cost" required>
+                                <option value="">Select budget tier</option>
+                                <option value="Low">Low (Commodity mass-production budget)</option>
+                                <option value="Medium">Medium (Standard engineering polymer budget)</option>
+                                <option value="High">High (High-performance premium budget)</option>
+                            </select>
+                            <span class="form-hint">Raw material cost tolerance</span>
+                        </div>
+                    </div>
+
+                    <div class="form-actions" style="margin-top: 1.75rem;">
+                        <button type="submit" class="btn btn-primary" id="submit-btn" style="padding: 0.85rem 2.25rem; font-size: 1.05rem;">
+                            <i class="fas fa-calculator"></i> Run Decision Engine
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Loading State -->
+                <div id="loading" class="loading hidden" style="margin-top: 2rem;">
+                    <div class="spinner"></div>
+                    <p style="font-weight: 600; color: var(--primary);">Evaluating 100+ polymers against your engineering constraints…</p>
+                </div>
+            </div>
+
+            <!-- Recommendation Results Container -->
+            <div id="results" class="results hidden"></div>
+
+            <!-- Catalog Navigation CTA -->
+            <div style="text-align: center; margin-top: 3.5rem; padding: 2.25rem 1.5rem; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+                <h3 style="margin-bottom: 0.4rem; color: var(--primary);">Want to explore all polymers without recommendations?</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1.25rem; max-width: 600px; margin-inline: auto;">
+                    Browse our full categorized library of 100+ thermoplastics, thermosets, elastomers, fluoropolymers, and reinforced composites.
+                </p>
+                <a href="/materials" class="btn btn-outline" style="padding: 0.75rem 1.75rem; font-size: 0.95rem; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-layer-group"></i>
+                    <span>Browse All Polymers Catalog</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer-title">Polymer Material Selection &amp; Recommendation System</p>
+            <p class="footer-sub">Rule-Based Decision Making · Flask · MySQL · HTML / CSS / JavaScript</p>
+            <p class="footer-copy">Final Year Engineering Project &copy; 2026</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
