@@ -3,76 +3,185 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Polymer Materials (100+ Catalog) | PolySelect</title>
+    <title>Polymer Materials Catalog | PolySelect</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        .catalog-controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 1.75rem;
+        /* Category-Wise Filter Navigation */
+        .category-filter-section {
             background: var(--surface);
-            padding: 1.25rem;
-            border-radius: var(--radius);
             border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 2rem;
             box-shadow: var(--shadow-sm);
         }
-        .search-box {
-            position: relative;
-            flex: 1 1 320px;
+
+        .category-filter-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border);
         }
-        .search-box i {
+
+        .category-filter-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-dropdown-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .category-dropdown {
+            padding: 0.5rem 0.85rem;
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            background: #ffffff;
+            font-size: 0.9rem;
+            color: var(--text);
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            transition: border-color var(--transition);
+        }
+
+        .category-dropdown:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.15);
+        }
+
+        /* Category Filter Pills Grid / Scroll */
+        .category-pills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .category-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            border-radius: 9999px;
+            background: var(--bg);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all var(--transition);
+            user-select: none;
+        }
+
+        .category-pill:hover {
+            background: #e2e8f0;
+            color: var(--primary);
+            border-color: var(--border-strong);
+        }
+
+        .category-pill.active {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 2px 6px rgba(12, 74, 110, 0.25);
+        }
+
+        .category-pill .pill-badge {
+            font-size: 0.75rem;
+            padding: 0.1rem 0.45rem;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.08);
+            font-weight: 700;
+        }
+
+        .category-pill.active .pill-badge {
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+        }
+
+        /* Catalog Metadata Bar */
+        .catalog-meta-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 0.75rem 1rem;
+            background: rgba(12, 74, 110, 0.04);
+            border-left: 4px solid var(--primary-light);
+            border-radius: var(--radius-sm);
+        }
+
+        .catalog-count-info {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .optional-search-wrap {
+            position: relative;
+            min-width: 260px;
+        }
+
+        .optional-search-wrap i {
             position: absolute;
-            left: 1rem;
+            left: 0.85rem;
             top: 50%;
             transform: translateY(-50%);
             color: var(--text-muted);
             pointer-events: none;
+            font-size: 0.85rem;
         }
-        .search-box input {
+
+        .optional-search-wrap input {
             width: 100%;
-            padding: 0.75rem 1rem 0.75rem 2.6rem;
+            padding: 0.45rem 0.75rem 0.45rem 2.25rem;
+            font-size: 0.88rem;
             border: 1px solid var(--border-strong);
             border-radius: var(--radius-sm);
-            font-size: 0.95rem;
             outline: none;
-            transition: border-color var(--transition);
+            background: #ffffff;
         }
-        .search-box input:focus {
+
+        .optional-search-wrap input:focus {
             border-color: var(--primary-light);
-            box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.15);
+            box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.12);
         }
-        .filter-group {
+
+        /* Material Card Styling in Catalog */
+        .catalog-card {
             display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-        .filter-select {
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border-strong);
-            border-radius: var(--radius-sm);
-            background: #fff;
-            color: var(--text);
-            font-size: 0.95rem;
-            outline: none;
-            cursor: pointer;
-        }
-        .filter-select:focus {
-            border-color: var(--primary-light);
-        }
-        .catalog-meta {
-            display: flex;
+            flex-direction: column;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.25rem;
-            font-size: 0.95rem;
-            color: var(--text-muted);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.15rem;
+            text-decoration: none;
+            color: inherit;
+            transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+            position: relative;
         }
-        .category-badge {
+
+        .catalog-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--primary-light);
+            box-shadow: var(--shadow);
+        }
+
+        .card-category-tag {
             display: inline-block;
             font-size: 0.72rem;
             font-weight: 700;
@@ -80,6 +189,86 @@
             letter-spacing: 0.04em;
             color: var(--secondary-dark);
             margin-bottom: 0.35rem;
+        }
+
+        .catalog-card h3 {
+            font-size: 1.15rem;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+            line-height: 1.3;
+        }
+
+        .catalog-card-desc {
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.85rem;
+            line-height: 1.45;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-props-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            margin-top: auto;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .prop-chip {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            background: var(--bg);
+            color: var(--text-secondary);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .card-view-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--primary-light);
+            margin-top: 0.65rem;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .category-filter-section {
+                padding: 1rem;
+            }
+            .category-filter-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .category-dropdown-wrap {
+                width: 100%;
+            }
+            .category-dropdown {
+                width: 100%;
+            }
+            .catalog-meta-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .optional-search-wrap {
+                width: 100%;
+            }
+            .category-pills-list {
+                gap: 0.4rem;
+            }
+            .category-pill {
+                padding: 0.4rem 0.75rem;
+                font-size: 0.82rem;
+            }
         }
     </style>
 </head>
@@ -96,6 +285,7 @@
                 <li><a href="/">Home</a></li>
                 <li><a href="/#about">About</a></li>
                 <li><a href="/#features">Features</a></li>
+                <li><a href="/#how-it-works">How It Works</a></li>
                 <li><a href="/materials" style="color: var(--primary-light); font-weight: 700;">All Polymers</a></li>
                 <li><a href="/#recommend" class="btn-nav">Get Recommendation</a></li>
             </ul>
@@ -113,10 +303,10 @@
             <nav class="breadcrumb" aria-label="Breadcrumb">
                 <a href="/" style="color: rgba(255,255,255,0.85); text-decoration: none;">Home</a>
                 <span class="separator">/</span>
-                <span aria-current="page">All Polymer Materials</span>
+                <span aria-current="page">Polymer Materials Catalog</span>
             </nav>
             <h1>Polymer Materials Catalog</h1>
-            <p class="material-category">Complete database of 100+ engineering polymers, thermoplastics, elastomers, thermosets &amp; composites</p>
+            <p class="material-category">Browse 100+ engineering polymers categorized by chemical family, performance tier, and engineering application</p>
         </div>
     </section>
 
@@ -124,65 +314,122 @@
     <section class="section">
         <div class="container">
 
-            <!-- Search and Filter Bar -->
-            <div class="catalog-controls">
-                <div class="search-box">
+            <!-- Category-Wise Filter Control -->
+            <div class="category-filter-section">
+                <div class="category-filter-header">
+                    <span class="category-filter-title">
+                        <i class="fas fa-filter"></i>
+                        Select Polymer Category
+                    </span>
+                    <div class="category-dropdown-wrap">
+                        <label for="category-filter-select" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Quick Filter:</label>
+                        <select id="category-filter-select" class="category-dropdown" aria-label="Select polymer category">
+                            <option value="ALL">All Categories (100+)</option>
+                            <option value="Thermoplastic">Commodity Thermoplastics</option>
+                            <option value="Engineering Thermoplastic">Engineering Thermoplastics</option>
+                            <option value="High-Performance">High-Performance Polymers</option>
+                            <option value="Fluoropolymer">Fluoropolymers</option>
+                            <option value="Thermoset">Thermosets &amp; Resins</option>
+                            <option value="Elastomer">Elastomers &amp; Rubbers</option>
+                            <option value="Biopolymer">Biopolymers &amp; Bio-Based</option>
+                            <option value="Reinforced Composite">Reinforced Composites</option>
+                            <option value="Specialty">Specialty Polymers &amp; Blends</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Category Pills (Click to filter) -->
+                <div class="category-pills-list" id="category-pills">
+                    <button type="button" class="category-pill active" data-category="ALL">
+                        <i class="fas fa-layer-group"></i> All Materials
+                    </button>
+                    <button type="button" class="category-pill" data-category="Thermoplastic">
+                        <i class="fas fa-box"></i> Thermoplastics
+                    </button>
+                    <button type="button" class="category-pill" data-category="Engineering Thermoplastic">
+                        <i class="fas fa-cogs"></i> Engineering Thermoplastics
+                    </button>
+                    <button type="button" class="category-pill" data-category="High-Performance">
+                        <i class="fas fa-fire"></i> High-Performance
+                    </button>
+                    <button type="button" class="category-pill" data-category="Fluoropolymer">
+                        <i class="fas fa-shield-alt"></i> Fluoropolymers
+                    </button>
+                    <button type="button" class="category-pill" data-category="Thermoset">
+                        <i class="fas fa-cube"></i> Thermosets &amp; Resins
+                    </button>
+                    <button type="button" class="category-pill" data-category="Elastomer">
+                        <i class="fas fa-ring"></i> Elastomers &amp; Rubbers
+                    </button>
+                    <button type="button" class="category-pill" data-category="Biopolymer">
+                        <i class="fas fa-leaf"></i> Biopolymers
+                    </button>
+                    <button type="button" class="category-pill" data-category="Reinforced Composite">
+                        <i class="fas fa-cubes"></i> Reinforced Composites
+                    </button>
+                    <button type="button" class="category-pill" data-category="Specialty">
+                        <i class="fas fa-flask"></i> Specialty &amp; Blends
+                    </button>
+                </div>
+            </div>
+
+            <!-- Result Count & Optional Keyword Filter -->
+            <div class="catalog-meta-bar">
+                <div class="catalog-count-info" id="catalog-count-text">
+                    Showing materials...
+                </div>
+                <div class="optional-search-wrap">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="catalog-search" placeholder="Search by name, category, or keyword (e.g. PEEK, Nylon, Tubing, High Temp)...">
-                </div>
-                <div class="filter-group">
-                    <label for="category-filter" style="font-weight: 600; font-size: 0.9rem; color: var(--text-secondary);"><i class="fas fa-filter"></i> Category:</label>
-                    <select id="category-filter" class="filter-select">
-                        <option value="ALL">All Categories</option>
-                        <option value="Thermoplastic">Thermoplastic</option>
-                        <option value="Engineering Thermoplastic">Engineering Thermoplastic</option>
-                        <option value="High-Performance Polymer">High-Performance Polymer</option>
-                        <option value="Fluoropolymer">Fluoropolymer</option>
-                        <option value="Thermoset">Thermoset</option>
-                        <option value="Thermoplastic Elastomer">Thermoplastic Elastomer</option>
-                        <option value="Elastomer">Elastomer / Rubber</option>
-                        <option value="Biopolymer">Biopolymer / Bio-Based</option>
-                        <option value="Reinforced Composite">Reinforced Composite</option>
-                        <option value="Specialty">Specialty Polymer</option>
-                    </select>
+                    <input type="text" id="catalog-keyword" placeholder="Optional: search within category...">
                 </div>
             </div>
 
-            <!-- Result Count & Quick Reset -->
-            <div class="catalog-meta">
-                <span id="catalog-count-text">Loading catalog materials…</span>
-                <button type="button" id="reset-filters-btn" class="btn btn-outline" style="padding: 0.4rem 0.9rem; font-size: 0.85rem;">
-                    <i class="fas fa-redo"></i> Reset Filters
-                </button>
-            </div>
-
-            <!-- Loading Spinner -->
-            <div id="catalog-loading" class="loading">
+            <!-- Loading Spinner (Fallback if hydrating) -->
+            <div id="catalog-loading" class="loading hidden">
                 <div class="spinner"></div>
-                <p>Loading full polymer materials database…</p>
+                <p>Loading polymer materials database…</p>
             </div>
 
             <!-- Materials Grid -->
             <div class="materials-grid" id="all-materials-grid">
-                <!-- Dynamically populated by JavaScript -->
+                {% if initial_materials %}
+                    {% for mat in initial_materials %}
+                    <a class="catalog-card" href="/material/{{ mat.id }}">
+                        <div>
+                            <span class="card-category-tag">{{ mat.category }}</span>
+                            <h3>{{ mat.name }}</h3>
+                            <p class="catalog-card-desc">{{ mat.description }}</p>
+                        </div>
+                        <div>
+                            <div class="card-props-chips">
+                                <span class="prop-chip" title="Tensile Strength"><i class="fas fa-dumbbell"></i> {{ mat.strength }} MPa</span>
+                                <span class="prop-chip" title="Max Temperature"><i class="fas fa-thermometer-half"></i> {{ mat.max_temperature }}°C</span>
+                                <span class="prop-chip" title="Density"><i class="fas fa-weight-hanging"></i> {{ mat.density }} g/cm³</span>
+                                <span class="prop-chip" title="Cost Level"><i class="fas fa-tag"></i> {{ mat.cost }}</span>
+                            </div>
+                            <span class="card-view-btn">View Specifications <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                {% endif %}
             </div>
 
             <!-- Empty Search State -->
             <div id="catalog-empty-state" class="state-message empty hidden">
-                <i class="fas fa-search"></i>
-                <h3>No matching polymers found</h3>
-                <p>No materials matched your search criteria. Try a different keyword or category.</p>
+                <i class="fas fa-filter"></i>
+                <h3>No materials match your selection</h3>
+                <p>No polymers found for the selected category and keyword filter.</p>
                 <br>
-                <button type="button" class="btn btn-primary" onclick="clearCatalogFilters()">
-                    <i class="fas fa-redo"></i> Show All Polymers
+                <button type="button" class="btn btn-primary" id="btn-show-all-categories">
+                    <i class="fas fa-redo"></i> Show All 100+ Polymers
                 </button>
             </div>
 
             <!-- Bottom Action CTA -->
             <div style="text-align: center; margin-top: 3.5rem; padding: 2.5rem 1.5rem; background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
-                <h3 style="margin-bottom: 0.5rem; color: var(--primary);">Need a specific material recommendation?</h3>
-                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; max-width: 600px; margin-inline: auto;">
-                    Use our 100-point multi-attribute rule-based decision algorithm to find the top 3 ranked polymers for your operating parameters.
+                <h3 style="margin-bottom: 0.5rem; color: var(--primary);">Need an automated material recommendation?</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem; max-width: 620px; margin-inline: auto;">
+                    Use our 100-point multi-attribute rule-based decision engine to evaluate your strength, temperature, weight, chemical and cost constraints.
                 </p>
                 <a href="/#recommend" class="btn btn-primary" style="padding: 0.85rem 2.2rem; font-size: 1rem; border-radius: var(--radius-sm); display: inline-flex; align-items: center; gap: 0.6rem;">
                     <i class="fas fa-calculator"></i>
@@ -203,6 +450,10 @@
         </div>
     </footer>
 
+    <!-- Initial Data Payload for Zero-Latency Instant Render -->
+    <script id="initial-catalog-data" type="application/json">
+        {{ initial_materials | tojson | safe }}
+    </script>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

@@ -53,14 +53,18 @@ auto_init_database()
 
 @app.route("/")
 def home():
-    """Serve the complete interactive frontend UI."""
-    return render_template("index.html")
+    """Serve the complete interactive frontend UI with featured materials."""
+    all_mats = get_all_polymers()
+    featured = [m.to_dict() for m in all_mats[:5]]
+    return render_template("index.html", featured_materials=featured)
 
 
 @app.route("/materials")
 def materials_catalog():
     """Serve the complete polymer materials catalog page."""
-    return render_template("materials.html")
+    all_mats = get_all_polymers()
+    materials_list = [m.to_dict() for m in all_mats]
+    return render_template("materials.html", initial_materials=materials_list)
 
 
 @app.route("/material/<int:id>")
@@ -72,10 +76,15 @@ def material_details(id):
         if polymer is None:
             abort(404)
 
-        related = Polymer.query.filter(
-            Polymer.category == polymer.category,
-            Polymer.id != polymer.id,
-        ).limit(3).all()
+        try:
+            related = Polymer.query.filter(
+                Polymer.category == polymer.category,
+                Polymer.id != polymer.id,
+            ).limit(3).all()
+        except Exception:
+            db.session.rollback()
+            all_mats = get_all_polymers()
+            related = [m for m in all_mats if m.category == polymer.category and m.id != polymer.id][:3]
 
         return render_template(
             "material_details.html",
@@ -123,12 +132,19 @@ def test_db():
             "success": True,
             "message": "Database connection successful",
         }), 200
-    except Exception:
+    except Exception as exc:
         db.session.rollback()
         app.logger.exception("DATABASE TEST FAILED")
+        import re
+        safe_msg = re.sub(r':([^@/\s:]+)@', ':***@', str(exc))
+        uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        safe_uri = re.sub(r':([^@/\s:]+)@', ':***@', uri)
         return jsonify({
             "success": False,
             "message": "Database connection failed",
+            "error_type": type(exc).__name__,
+            "error_detail": safe_msg[:300],
+            "database_target": safe_uri[:200]
         }), 500
 
 

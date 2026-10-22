@@ -203,7 +203,43 @@
                 <p class="section-subtitle">Common engineering polymers — click any material to view detailed properties</p>
             </div>
             <div class="materials-grid" id="materials-grid" data-limit="5">
-                <!-- Populated by JavaScript (first 5 polymers) -->
+                {% if featured_materials %}
+                    {% for mat in featured_materials %}
+                    <a class="material-card" href="/material/{{ mat.id }}">
+                        <span class="category-badge">{{ mat.category }}</span>
+                        <h3>{{ mat.name }}</h3>
+                        <p class="material-meta">
+                            {{ mat.strength }} MPa · {{ mat.max_temperature }}°C · {{ mat.cost }} Cost
+                        </p>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <a class="material-card" href="/material/1">
+                        <span class="category-badge">Thermoplastic</span>
+                        <h3>HDPE</h3>
+                        <p class="material-meta">28.00 MPa · 120°C · Low Cost</p>
+                    </a>
+                    <a class="material-card" href="/material/3">
+                        <span class="category-badge">Thermoplastic</span>
+                        <h3>PP (Polypropylene)</h3>
+                        <p class="material-meta">35.00 MPa · 130°C · Low Cost</p>
+                    </a>
+                    <a class="material-card" href="/material/4">
+                        <span class="category-badge">Thermoplastic</span>
+                        <h3>PVC</h3>
+                        <p class="material-meta">52.00 MPa · 70°C · Low Cost</p>
+                    </a>
+                    <a class="material-card" href="/material/6">
+                        <span class="category-badge">Thermoplastic</span>
+                        <h3>PET</h3>
+                        <p class="material-meta">70.00 MPa · 115°C · Low Cost</p>
+                    </a>
+                    <a class="material-card" href="/material/7">
+                        <span class="category-badge">Engineering Thermoplastic</span>
+                        <h3>Nylon 6 (PA 6)</h3>
+                        <p class="material-meta">80.00 MPa · 160°C · Medium Cost</p>
+                    </a>
+                {% endif %}
             </div>
             <div style="text-align: center; margin-top: 2.25rem;">
                 <a href="/materials" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.6rem; padding: 0.85rem 2rem; font-size: 1rem; border-radius: 8px; text-decoration: none;">

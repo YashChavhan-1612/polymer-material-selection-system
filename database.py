@@ -1473,22 +1473,101 @@ DEFAULT_POLYMERS = [
     }
 ]
 # ============================================================
+# Fallback In-Memory Polymer Data Handler
+# ============================================================
+
+class FallbackPolymer:
+    """Lightweight Polymer-compatible object used when SQL database is initializing or offline."""
+
+    def __init__(self, id, data):
+        self.id = id
+        self.name = data.get('name', '')
+        self.category = data.get('category', '')
+        self.description = data.get('description', '')
+        self.strength = data.get('strength', 0.0)
+        self.max_temperature = data.get('max_temperature', 0)
+        self.density = data.get('density', 1.0)
+        self.chemical_resistance = data.get('chemical_resistance', 'Moderate')
+        self.cost = data.get('cost', 'Medium')
+        self.advantages = data.get('advantages', '')
+        self.limitations = data.get('limitations', '')
+        self.applications = data.get('applications', '')
+        self.image_url = data.get('image_url')
+        self.created_at = None
+
+    def to_dict(self):
+        """Convert the fallback model instance to a dictionary matching Polymer.to_dict()."""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'category': self.category,
+            'description': self.description,
+            'strength': float(self.strength) if self.strength is not None else None,
+            'max_temperature': self.max_temperature,
+            'density': float(self.density) if self.density is not None else None,
+            'chemical_resistance': self.chemical_resistance,
+            'cost': self.cost,
+            'advantages': self.advantages,
+            'limitations': self.limitations,
+            'applications': self.applications,
+            'image_url': self.image_url,
+            'created_at': None
+        }
+
+
+def _get_fallback_polymers():
+    """Generate in-memory polymer objects from DEFAULT_POLYMERS."""
+    return [FallbackPolymer(idx + 1, data) for idx, data in enumerate(DEFAULT_POLYMERS)]
+
+
+# ============================================================
 # Helper functions
 # ============================================================
 
 def get_all_polymers():
-    """Retrieve all polymer materials from the database."""
-    return Polymer.query.order_by(Polymer.id).all()
+    """Retrieve all polymer materials from the database, falling back safely to default polymers if DB is offline."""
+    try:
+        polymers = Polymer.query.order_by(Polymer.id).all()
+        if polymers:
+            return polymers
+    except Exception:
+        db.session.rollback()
+
+    return _get_fallback_polymers()
 
 
 def get_polymer_by_id(polymer_id):
-    """Retrieve a single polymer by its ID using modern SQLAlchemy session get."""
-    return db.session.get(Polymer, polymer_id)
+    """Retrieve a single polymer by its ID using modern SQLAlchemy session get with offline fallback."""
+    try:
+        poly = db.session.get(Polymer, polymer_id)
+        if poly is not None:
+            return poly
+    except Exception:
+        db.session.rollback()
+
+    for p in _get_fallback_polymers():
+        if p.id == polymer_id:
+            return p
+    return None
 
 
 def get_polymer_by_name(name):
-    """Retrieve a single polymer by its name (case-insensitive)."""
-    return Polymer.query.filter(Polymer.name.ilike(name)).first()
+    """Retrieve a single polymer by its name (case-insensitive) with offline fallback."""
+    if not name:
+        return None
+
+    try:
+        poly = Polymer.query.filter(Polymer.name.ilike(name)).first()
+        if poly is not None:
+            return poly
+    except Exception:
+        db.session.rollback()
+
+    name_clean = name.strip().lower()
+    for p in _get_fallback_polymers():
+        if p.name.strip().lower() == name_clean:
+            return p
+    return None
 
 
 def seed_database(force=False):

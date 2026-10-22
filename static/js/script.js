@@ -28,6 +28,7 @@ document.querySelectorAll('.nav-links a').forEach(link => {
    ============================================================ */
 
 let allMaterialsCache = [];
+let currentSelectedCategory = 'ALL';
 
 function escapeHtml(text) {
     if (!text) return '';
@@ -41,13 +42,36 @@ function renderMaterialCard(mat) {
     card.className = 'material-card';
     card.href = `/material/${encodeURIComponent(mat.id)}`;
     card.innerHTML = `
-        <span style="display:inline-block;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--secondary);margin-bottom:0.25rem;">
+        <span class="category-badge">
             ${escapeHtml(mat.category)}
         </span>
         <h3 style="margin-bottom:0.4rem;font-size:1.15rem;">${escapeHtml(mat.name)}</h3>
         <p class="material-meta" style="font-size:0.85rem;color:var(--text-muted);">
-            ${escapeHtml(String(mat.strength))} MPa · ${escapeHtml(String(mat.max_temperature))}°C · ${escapeHtml(mat.cost)}
+            ${escapeHtml(String(mat.strength))} MPa · ${escapeHtml(String(mat.max_temperature))}°C · ${escapeHtml(mat.cost)} Cost
         </p>
+    `;
+    return card;
+}
+
+function renderCatalogCard(mat) {
+    const card = document.createElement('a');
+    card.className = 'catalog-card';
+    card.href = `/material/${encodeURIComponent(mat.id)}`;
+    card.innerHTML = `
+        <div>
+            <span class="card-category-tag">${escapeHtml(mat.category)}</span>
+            <h3>${escapeHtml(mat.name)}</h3>
+            <p class="catalog-card-desc">${escapeHtml(mat.description || '')}</p>
+        </div>
+        <div>
+            <div class="card-props-chips">
+                <span class="prop-chip" title="Tensile Strength"><i class="fas fa-dumbbell"></i> ${escapeHtml(String(mat.strength))} MPa</span>
+                <span class="prop-chip" title="Max Temperature"><i class="fas fa-thermometer-half"></i> ${escapeHtml(String(mat.max_temperature))}°C</span>
+                <span class="prop-chip" title="Density"><i class="fas fa-weight-hanging"></i> ${escapeHtml(String(mat.density))} g/cm³</span>
+                <span class="prop-chip" title="Cost Level"><i class="fas fa-tag"></i> ${escapeHtml(mat.cost)}</span>
+            </div>
+            <span class="card-view-btn">View Specifications <i class="fas fa-arrow-right"></i></span>
+        </div>
     `;
     return card;
 }
@@ -61,9 +85,9 @@ async function loadHomeFeaturedMaterials() {
         const response = await fetch(`${API_BASE_URL}/api/materials`);
         const data = await response.json();
 
-        if (data.success && Array.isArray(data.materials)) {
+        if (data.success && Array.isArray(data.materials) && data.materials.length > 0) {
             grid.innerHTML = '';
-            // Display only 5 featured polymers on the home page
+            // Display 5 featured polymers on the home page
             const limit = grid.dataset.limit ? parseInt(grid.dataset.limit, 10) : 5;
             const featured = data.materials.slice(0, limit);
             featured.forEach(mat => {
@@ -71,9 +95,61 @@ async function loadHomeFeaturedMaterials() {
             });
         }
     } catch (err) {
-        console.error('Featured materials load failed', err);
+        console.warn('Featured materials live update deferred; keeping pre-rendered cards', err);
     }
 }
+
+/* ---------- Category Matcher Helper ---------- */
+function matchesCategory(materialCategory, selectedCategory) {
+    if (selectedCategory === 'ALL') return true;
+    const cat = (materialCategory || '').toLowerCase();
+    const sel = selectedCategory.toLowerCase();
+
+    if (sel === 'thermoplastic') {
+        return (cat.includes('thermoplastic') && !cat.includes('engineering') && !cat.includes('elastomer'))
+            || cat.includes('polyethylene') || cat.includes('cellular');
+    }
+    if (sel === 'engineering thermoplastic') {
+        return cat.includes('engineering') || cat.includes('polyamide');
+    }
+    if (sel === 'high-performance') {
+        return cat.includes('high-performance') || cat.includes('ultra-high');
+    }
+    if (sel === 'fluoropolymer') {
+        return cat.includes('fluoropolymer');
+    }
+    if (sel === 'thermoset') {
+        return cat.includes('thermoset');
+    }
+    if (sel === 'elastomer') {
+        return cat.includes('elastomer') || cat.includes('rubber');
+    }
+    if (sel === 'biopolymer') {
+        return cat.includes('bio');
+    }
+    if (sel === 'reinforced composite') {
+        return cat.includes('reinforced') || cat.includes('composite');
+    }
+    if (sel === 'specialty') {
+        return cat.includes('specialty') || cat.includes('blend') || cat.includes('copolymer') || cat.includes('barrier');
+    }
+
+    return cat.includes(sel);
+}
+
+/* ---------- Category Names for Readable Feedback ---------- */
+const CATEGORY_DISPLAY_NAMES = {
+    'ALL': 'engineering polymers',
+    'Thermoplastic': 'Commodity Thermoplastics',
+    'Engineering Thermoplastic': 'Engineering Thermoplastics',
+    'High-Performance': 'High-Performance Polymers',
+    'Fluoropolymer': 'Fluoropolymers',
+    'Thermoset': 'Thermosets & Resins',
+    'Elastomer': 'Elastomers & Rubbers',
+    'Biopolymer': 'Biopolymers & Bio-Based Polymers',
+    'Reinforced Composite': 'Reinforced Composites',
+    'Specialty': 'Specialty Polymers & Blends'
+};
 
 /* ---------- Load Full Catalog (/materials page: 100+ materials) ---------- */
 async function loadCatalogMaterials() {
@@ -82,37 +158,100 @@ async function loadCatalogMaterials() {
 
     const countText = document.getElementById('catalog-count-text');
     const loadingEl = document.getElementById('catalog-loading');
-    const searchInput = document.getElementById('catalog-search');
-    const categorySelect = document.getElementById('category-filter');
-    const resetBtn = document.getElementById('reset-filters-btn');
+    const keywordInput = document.getElementById('catalog-keyword');
+    const categorySelect = document.getElementById('category-filter-select');
+    const pillsList = document.querySelectorAll('.category-pill');
+    const resetBtn = document.getElementById('btn-show-all-categories');
 
+    // 1. Immediately hydrate from embedded JSON if available (zero-delay, 100% offline-safe)
+    const initialDataEl = document.getElementById('initial-catalog-data');
+    if (initialDataEl) {
+        try {
+            const raw = initialDataEl.textContent.trim();
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    allMaterialsCache = parsed;
+                    renderFilteredCatalog();
+                }
+            }
+        } catch (e) {
+            console.warn('Could not parse embedded initial catalog data', e);
+        }
+    }
+
+    // 2. Setup Category Pills Click Listener
+    pillsList.forEach(pill => {
+        pill.addEventListener('click', () => {
+            const cat = pill.dataset.category || 'ALL';
+            setSelectedCategory(cat);
+        });
+    });
+
+    // 3. Setup Category Dropdown Listener
+    if (categorySelect) {
+        categorySelect.addEventListener('change', () => {
+            setSelectedCategory(categorySelect.value);
+        });
+    }
+
+    // 4. Setup Optional Keyword Filter
+    if (keywordInput) {
+        keywordInput.addEventListener('input', () => {
+            renderFilteredCatalog();
+        });
+    }
+
+    // 5. Setup Reset Button
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            if (keywordInput) keywordInput.value = '';
+            setSelectedCategory('ALL');
+        });
+    }
+
+    // 6. Fetch live updates from API in the background
     try {
         const response = await fetch(`${API_BASE_URL}/api/materials`);
         const data = await response.json();
-
         if (loadingEl) loadingEl.classList.add('hidden');
 
-        if (data.success && Array.isArray(data.materials)) {
+        if (data.success && Array.isArray(data.materials) && data.materials.length > 0) {
             allMaterialsCache = data.materials;
             renderFilteredCatalog();
-
-            if (searchInput) {
-                searchInput.addEventListener('input', renderFilteredCatalog);
-            }
-            if (categorySelect) {
-                categorySelect.addEventListener('change', renderFilteredCatalog);
-            }
-            if (resetBtn) {
-                resetBtn.addEventListener('click', clearCatalogFilters);
-            }
-        } else {
-            if (countText) countText.textContent = 'Unable to load catalog at this time.';
+        } else if (allMaterialsCache.length === 0) {
+            if (countText) countText.textContent = 'Polymer materials catalog available.';
         }
     } catch (err) {
         if (loadingEl) loadingEl.classList.add('hidden');
-        if (countText) countText.textContent = 'Error loading materials catalog.';
-        console.error('Catalog load failed', err);
+        console.warn('Live API fetch deferred; using catalog cache', err);
     }
+}
+
+function setSelectedCategory(categoryKey) {
+    currentSelectedCategory = categoryKey;
+
+    // Update active class on pills
+    document.querySelectorAll('.category-pill').forEach(pill => {
+        if (pill.dataset.category === categoryKey) {
+            pill.classList.add('active');
+        } else {
+            pill.classList.remove('active');
+        }
+    });
+
+    // Sync dropdown
+    const categorySelect = document.getElementById('category-filter-select');
+    if (categorySelect && categorySelect.value !== categoryKey) {
+        for (let i = 0; i < categorySelect.options.length; i++) {
+            if (categorySelect.options[i].value === categoryKey) {
+                categorySelect.selectedIndex = i;
+                break;
+            }
+        }
+    }
+
+    renderFilteredCatalog();
 }
 
 function renderFilteredCatalog() {
@@ -120,28 +259,24 @@ function renderFilteredCatalog() {
     if (!allGrid) return;
 
     const countText = document.getElementById('catalog-count-text');
-    const searchInput = document.getElementById('catalog-search');
-    const categorySelect = document.getElementById('category-filter');
+    const keywordInput = document.getElementById('catalog-keyword');
     const emptyState = document.getElementById('catalog-empty-state');
 
-    const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
-    const selectedCategory = categorySelect ? categorySelect.value : 'ALL';
+    const keyword = keywordInput ? keywordInput.value.trim().toLowerCase() : '';
 
     const filtered = allMaterialsCache.filter(mat => {
         // Category filter
-        if (selectedCategory !== 'ALL') {
-            const matCat = (mat.category || '').toLowerCase();
-            const targetCat = selectedCategory.toLowerCase();
-            if (!matCat.includes(targetCat)) return false;
+        if (!matchesCategory(mat.category, currentSelectedCategory)) {
+            return false;
         }
 
-        // Text search (name, category, applications, description)
-        if (query) {
+        // Optional keyword filter (name, category, applications, description)
+        if (keyword) {
             const name = (mat.name || '').toLowerCase();
             const category = (mat.category || '').toLowerCase();
             const apps = (mat.applications || '').toLowerCase();
             const desc = (mat.description || '').toLowerCase();
-            return name.includes(query) || category.includes(query) || apps.includes(query) || desc.includes(query);
+            return name.includes(keyword) || category.includes(keyword) || apps.includes(keyword) || desc.includes(keyword);
         }
 
         return true;
@@ -149,30 +284,27 @@ function renderFilteredCatalog() {
 
     allGrid.innerHTML = '';
 
+    const totalCount = allMaterialsCache.length;
+    const catLabel = CATEGORY_DISPLAY_NAMES[currentSelectedCategory] || currentSelectedCategory;
+
     if (filtered.length === 0) {
         if (emptyState) emptyState.classList.remove('hidden');
-        if (countText) countText.textContent = `0 of ${allMaterialsCache.length} materials match your filters`;
+        if (countText) countText.textContent = `0 materials found in "${catLabel}"`;
     } else {
         if (emptyState) emptyState.classList.add('hidden');
         if (countText) {
-            if (filtered.length === allMaterialsCache.length) {
-                countText.textContent = `Showing all ${allMaterialsCache.length} engineering materials`;
+            if (currentSelectedCategory === 'ALL' && !keyword) {
+                countText.textContent = `Showing all ${totalCount} engineering polymers · Select a category above to filter`;
+            } else if (keyword) {
+                countText.textContent = `Showing ${filtered.length} materials matching "${keyword}" in ${catLabel}`;
             } else {
-                countText.textContent = `Showing ${filtered.length} of ${allMaterialsCache.length} materials`;
+                countText.textContent = `Showing ${filtered.length} ${catLabel} (out of ${totalCount} materials in database)`;
             }
         }
         filtered.forEach(mat => {
-            allGrid.appendChild(renderMaterialCard(mat));
+            allGrid.appendChild(renderCatalogCard(mat));
         });
     }
-}
-
-function clearCatalogFilters() {
-    const searchInput = document.getElementById('catalog-search');
-    const categorySelect = document.getElementById('category-filter');
-    if (searchInput) searchInput.value = '';
-    if (categorySelect) categorySelect.value = 'ALL';
-    renderFilteredCatalog();
 }
 
 /* ============================================================
@@ -410,6 +542,10 @@ function resetForm() {
 
 /* ---------- Initialization ---------- */
 document.addEventListener('DOMContentLoaded', () => {
-    loadHomeFeaturedMaterials();
-    loadCatalogMaterials();
+    if (document.getElementById('materials-grid')) {
+        loadHomeFeaturedMaterials();
+    }
+    if (document.getElementById('all-materials-grid')) {
+        loadCatalogMaterials();
+    }
 });

@@ -217,6 +217,34 @@ class TestProductionReadiness(unittest.TestCase):
                         for pattern in bad_patterns:
                             self.assertNotIn(pattern, text, f"Potential secret {pattern} found in {file}")
 
+    def test_16_materials_catalog_page(self):
+        """Test that /materials renders the category filter UI and embedded initial materials."""
+        response = self.client.get('/materials')
+        self.assertEqual(response.status_code, 200)
+        content = response.get_data(as_text=True)
+        self.assertIn('Polymer Materials Catalog', content)
+        self.assertIn('Select Polymer Category', content)
+        self.assertIn('category-pills', content)
+        self.assertIn('initial-catalog-data', content)
+
+    def test_17_home_page_contains_featured_cards(self):
+        """Test that GET / pre-renders featured polymer cards and More Polymers link."""
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        content = response.get_data(as_text=True)
+        self.assertIn('Featured Polymer Materials', content)
+        self.assertIn('More Polymers', content)
+        self.assertIn('material-card', content)
+
+    def test_18_fallback_polymers_when_db_offline(self):
+        """Test fallback retrieval mechanism provides default polymers."""
+        from database import _get_fallback_polymers
+        fallbacks = _get_fallback_polymers()
+        self.assertGreaterEqual(len(fallbacks), 100)
+        first = fallbacks[0]
+        self.assertEqual(first.name, 'HDPE')
+        self.assertIn('strength', first.to_dict())
+
 
 if __name__ == '__main__':
     unittest.main()

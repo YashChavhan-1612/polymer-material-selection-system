@@ -1,4 +1,5 @@
 import os
+import ssl
 from dotenv import load_dotenv
 from urllib.parse import quote_plus, urlparse, parse_qs, urlencode, urlunparse
 
@@ -8,8 +9,14 @@ load_dotenv()
 
 def build_database_uri():
     """Build SQLAlchemy database URI from environment variables with safe driver prefix, query sanitization and encoding."""
-    # Check for direct DATABASE_URL or MYSQL_URL (common on Render, Railway, Aiven, etc.)
-    database_url = os.getenv('DATABASE_URL') or os.getenv('MYSQL_URL')
+    # Check for direct DATABASE_URL or common cloud variants (Render, Railway, Aiven, etc.)
+    database_url = (
+        os.getenv('DATABASE_URL') or
+        os.getenv('MYSQL_URL') or
+        os.getenv('DATABASE_URI') or
+        os.getenv('MYSQL_URI') or
+        os.getenv('AIVEN_MYSQL_URL')
+    )
     if database_url:
         database_url = database_url.strip()
         # SQLAlchemy requires the mysql+pymysql dialect driver scheme
@@ -75,11 +82,18 @@ class Config:
     enable_ssl = os.getenv('DB_SSL', '').lower() in ['1', 'true', 'required'] or 'aiven' in db_uri_lower or (is_remote and os.getenv('DB_SSL', '').lower() != 'false')
 
     if enable_ssl and is_remote:
-        ssl_config = {'check_hostname': False}
+        # Create an SSLContext that allows remote MySQL connection with or without custom CA
+        ssl_ctx = ssl.create_default_context()
+        ssl_ctx.check_hostname = False
+        ssl_ctx.verify_mode = ssl.CERT_NONE
+
         ca_path = os.getenv('DB_SSL_CA')
         if ca_path and os.path.exists(ca_path):
-            ssl_config['ca'] = ca_path
-        connect_args['ssl'] = ssl_config
+            ssl_ctx.load_verify_locations(cafile=ca_path)
+            ssl_ctx.verify_mode = ssl.CERT_REQUIRED
+            ssl_ctx.check_hostname = True
+
+        connect_args['ssl'] = ssl_ctx
 
     # Production database pool and connection settings
     SQLALCHEMY_ENGINE_OPTIONS = {
