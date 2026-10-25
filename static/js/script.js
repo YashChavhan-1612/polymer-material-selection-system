@@ -59,6 +59,138 @@ function setupNavigation() {
 }
 
 /* ============================================================
+   Scroll-Reactive Dynamic Navbar
+   ============================================================ */
+function initNavbarScroll() {
+    const navbar = document.getElementById('navbar');
+    if (!navbar) return;
+
+    let ticking = false;
+    const handleScroll = () => {
+        if (!ticking) {
+            window.requestAnimationFrame(() => {
+                if (window.scrollY > 20) {
+                    navbar.classList.add('navbar-scrolled');
+                } else {
+                    navbar.classList.remove('navbar-scrolled');
+                }
+                ticking = false;
+            });
+            ticking = true;
+        }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+}
+
+/* ============================================================
+   Scroll-Reveal System using IntersectionObserver
+   ============================================================ */
+function initScrollReveal() {
+    const selectors = [
+        '.about-card',
+        '.feature-item',
+        '.step',
+        '.material-card',
+        '.catalog-card',
+        '.hero-metric-item',
+        '.details-card',
+        '.properties-card',
+        '.recommend-intro-card',
+        '.form-card',
+        '.recommendation-showcase-card'
+    ];
+
+    const elements = document.querySelectorAll(selectors.join(', '));
+    if (!elements.length) return;
+
+    if (!('IntersectionObserver' in window)) {
+        elements.forEach(el => el.classList.add('revealed'));
+        return;
+    }
+
+    const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('revealed');
+                obs.unobserve(entry.target);
+            }
+        });
+    }, {
+        threshold: 0.1,
+        rootMargin: '0px 0px -30px 0px'
+    });
+
+    elements.forEach((el, index) => {
+        el.classList.add('reveal-on-scroll');
+        const parent = el.parentNode;
+        let delay = (index % 4) * 80;
+        if (parent && parent.children) {
+            const siblingIndex = Array.prototype.indexOf.call(parent.children, el);
+            if (siblingIndex >= 0) {
+                delay = Math.min(siblingIndex * 75, 450);
+            }
+        }
+        el.style.transitionDelay = `${delay}ms`;
+        observer.observe(el);
+    });
+}
+
+/* ============================================================
+   Animated Dynamic Number Counters
+   ============================================================ */
+function initCounterAnimation() {
+    const counterElements = document.querySelectorAll('.hero-metric-number');
+    if (!counterElements.length) return;
+
+    const animateCounter = (el) => {
+        const rawText = el.textContent.trim();
+        const match = rawText.match(/^([<>=~]?\s*)(\d+)(.*)$/);
+        if (!match) return;
+
+        const prefix = match[1] || '';
+        const target = parseInt(match[2], 10);
+        const suffix = match[3] || '';
+        const duration = 1200;
+        const startTime = performance.now();
+
+        const updateCount = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease-out cubic: 1 - (1 - t)^3
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const currentVal = Math.floor(easeOut * target);
+
+            el.textContent = `${prefix}${currentVal}${suffix}`;
+
+            if (progress < 1) {
+                requestAnimationFrame(updateCount);
+            } else {
+                el.textContent = rawText;
+            }
+        };
+
+        requestAnimationFrame(updateCount);
+    };
+
+    if ('IntersectionObserver' in window) {
+        const counterObserver = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    animateCounter(entry.target);
+                    obs.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.25 });
+
+        counterElements.forEach(el => counterObserver.observe(el));
+    } else {
+        counterElements.forEach(el => animateCounter(el));
+    }
+}
+
+/* ============================================================
    Material Cards & Rendering Helpers
    ============================================================ */
 
@@ -475,7 +607,7 @@ function displayResults(recommendations) {
         </p>
     `;
 
-    recommendations.forEach(rec => {
+    recommendations.forEach((rec, index) => {
         const percentage = rec.compatibility_percentage ?? 0;
 
         const warningsHtml = (rec.warnings && rec.warnings.length > 0)
@@ -490,7 +622,7 @@ function displayResults(recommendations) {
             .join('');
 
         html += `
-            <div class="result-card rank-${rec.rank}">
+            <div class="result-card rank-${rec.rank}" style="animation-delay: ${(index * 0.12)}s;">
                 <div class="result-header">
                     <div>
                         <span class="rank-badge">
@@ -507,7 +639,7 @@ function displayResults(recommendations) {
                     </div>
                 </div>
                 <div class="progress-container">
-                    <div class="progress-bar" style="width:${percentage}%"></div>
+                    <div class="progress-bar" style="width: 0%;" data-target-width="${percentage}%"></div>
                 </div>
                 ${warningsHtml}
                 <div class="result-section">
@@ -533,6 +665,19 @@ function displayResults(recommendations) {
 
     resultsDiv.innerHTML = html;
     resultsDiv.classList.remove('hidden');
+
+    // Smoothly animate progress bars filling up from 0% to target percentage
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            const bars = resultsDiv.querySelectorAll('.progress-bar');
+            bars.forEach(bar => {
+                if (bar.dataset.targetWidth) {
+                    bar.style.width = bar.dataset.targetWidth;
+                }
+            });
+        }, 120);
+    });
+
     resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -583,6 +728,9 @@ function resetForm() {
 /* ---------- Initialization ---------- */
 document.addEventListener('DOMContentLoaded', () => {
     setupNavigation();
+    initNavbarScroll();
+    initScrollReveal();
+    initCounterAnimation();
     if (document.getElementById('materials-grid')) {
         loadHomeFeaturedMaterials();
     }
